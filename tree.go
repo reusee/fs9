@@ -1,6 +1,9 @@
 package fs9
 
+import "io/fs"
+
 type Tree interface {
+	fs.FS
 	Mutate(mutation Mutation) (Tree, error)
-	Open(path string) (Handle, error)
+	OpenHandle(path string) (Handle, error)
 }
