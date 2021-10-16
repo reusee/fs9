@@ -2,29 +2,29 @@ package fs9
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"testing"
+	"testing/fstest"
 
 	"github.com/reusee/e4"
 )
 
-func testTree(
+func testFS(
 	t *testing.T,
-	tree Tree,
+	fs FS,
 ) {
 	defer he(nil, e4.TestingFatal(t))
 
 	// write
-	h, err := tree.OpenHandle("foo", OptCreate(true))
+	h, err := fs.OpenHandle("foo", OptCreate(true))
 	ce(err)
 	_, err = fmt.Fprintf(h, "foo")
 	ce(err)
 	ce(h.Close())
 
 	// read
-	f, err := tree.Open("foo")
+	f, err := fs.Open("foo")
 	ce(err)
 	content, err := io.ReadAll(f)
 	ce(err)
@@ -32,5 +32,8 @@ func testTree(
 	if !bytes.Equal(content, []byte("foo")) {
 		t.Fatal()
 	}
+
+	// fstest
+	ce(fstest.TestFS(fs, "foo"))
 
 }
