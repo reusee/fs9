@@ -12,3 +12,7 @@ var (
 	we = e4.Wrap
 	pt = fmt.Printf
 )
+
+type (
+	any = interface{}
+)

@@ -45,3 +45,9 @@ func (f *File) Apply(path []string, op Operation) (*File, error) {
 
 	return f, nil
 }
+
+func (f *File) Info() FileInfo {
+	return FileInfo{
+		File: f,
+	}
+}
