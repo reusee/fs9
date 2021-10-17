@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/reusee/e4"
+	"github.com/reusee/pp"
 )
 
 var (
@@ -14,5 +15,7 @@ var (
 )
 
 type (
-	any = interface{}
+	any  = interface{}
+	Src  = pp.Src
+	Sink = pp.Sink
 )

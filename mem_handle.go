@@ -14,7 +14,10 @@ type MemHandle struct {
 	FS     *MemFS
 	Path   []string
 	Offset int64
+	iter   Src
 }
+
+var _ fs.ReadDirFile = new(MemHandle)
 
 func (m *MemHandle) Close() error {
 	//TODO
@@ -64,4 +67,38 @@ func (m *MemHandle) Write(data []byte) (n int, err error) {
 	}
 	m.Offset += int64(n)
 	return
+}
+
+func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
+	m.Lock()
+	defer m.Unlock()
+	if m.iter == nil {
+		err := m.FS.Apply(
+			m.Path,
+			func(file *File) (*File, error) {
+				m.iter = file.Entries.IterFileInfos(nil)
+				return file, nil
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for {
+		if n > 0 && len(ret) == n {
+			return
+		}
+		var v any
+		v, err = m.iter.Next()
+		if err != nil {
+			return nil, err
+		}
+		if v == nil {
+			if n > 0 {
+				err = io.EOF
+			}
+			return
+		}
+		ret = append(ret, v.(fs.DirEntry))
+	}
 }
