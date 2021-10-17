@@ -16,6 +16,7 @@ type Operation func(
 
 func Ensure(
 	name string,
+	isDir bool,
 	create bool,
 ) Operation {
 	return func(
@@ -27,6 +28,7 @@ func Ensure(
 		if create {
 			return &File{
 				Name:    name,
+				IsDir:   isDir,
 				ModTime: time.Now(),
 			}, nil
 		}

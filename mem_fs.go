@@ -56,7 +56,11 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 	}
 
 	pathParts := strings.Split(path, "/")
-	err := m.Apply(pathParts, Ensure(pathParts[len(pathParts)-1], spec.Create))
+	err := m.Apply(pathParts, Ensure(
+		pathParts[len(pathParts)-1],
+		false,
+		spec.Create,
+	))
 	if err != nil {
 		return nil, err
 	}
