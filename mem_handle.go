@@ -7,6 +7,8 @@ import (
 	"sync"
 )
 
+//TODO associate file by id instead of path
+
 type MemHandle struct {
 	sync.Mutex
 	FS     *MemFS

@@ -5,6 +5,8 @@ import "io/fs"
 type FS interface {
 	fs.FS
 	OpenHandle(path string, options ...OpenOption) (Handle, error)
+	MakeDir(path string) error
+	MakeDirAll(path string) error
 }
 
 type OpenOption func(*openSpec)

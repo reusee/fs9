@@ -85,3 +85,32 @@ func (m *MemFS) Apply(path []string, op Operation) error {
 	}
 	return nil
 }
+
+func (m *MemFS) MakeDir(path string) error {
+	parts := strings.Split(path, "/")
+	return m.Apply(
+		strings.Split(path, "/"),
+		Ensure(
+			parts[len(parts)-1],
+			true,
+			true,
+		),
+	)
+}
+
+func (m *MemFS) MakeDirAll(path string) error {
+	parts := strings.Split(path, "/")
+	for i := 1; i < len(parts); i++ {
+		if err := m.Apply(
+			parts[:i],
+			Ensure(
+				parts[i],
+				true,
+				true,
+			),
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}

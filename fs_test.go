@@ -15,15 +15,19 @@ func testFS(
 ) {
 	defer he(nil, e4.TestingFatal(t))
 
+	// make dir
+	err := fs.MakeDir("foo")
+	ce(err)
+
 	// write
-	h, err := fs.OpenHandle("foo", OptCreate(true))
+	h, err := fs.OpenHandle("foo/bar", OptCreate(true))
 	ce(err)
 	_, err = fmt.Fprintf(h, "foo")
 	ce(err)
 	ce(h.Close())
 
 	// read
-	f, err := fs.Open("foo")
+	f, err := fs.Open("foo/bar")
 	ce(err)
 	content, err := io.ReadAll(f)
 	ce(err)
