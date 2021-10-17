@@ -7,7 +7,7 @@ import (
 )
 
 type MemFS struct {
-	Entries []DirEntry
+	Entries DirEntries
 }
 
 var _ FS = new(MemFS)
