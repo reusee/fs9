@@ -2,6 +2,7 @@ package fs9
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/fs"
 	"sync"
@@ -20,7 +21,6 @@ type MemHandle struct {
 var _ fs.ReadDirFile = new(MemHandle)
 
 func (m *MemHandle) Close() error {
-	//TODO
 	return nil
 }
 
@@ -46,13 +46,40 @@ func (m *MemHandle) Read(buf []byte) (n int, err error) {
 }
 
 func (m *MemHandle) Seek(offset int64, whence int) (int64, error) {
-	//TODO
-	return 0, nil
+	m.Lock()
+	defer m.Unlock()
+	switch whence {
+	case 0:
+		m.Offset = offset
+	case 1:
+		m.Offset += offset
+	case 2:
+		if err := m.FS.Apply(
+			m.Path,
+			func(file *File) (*File, error) {
+				m.Offset = file.Size + offset
+				return file, nil
+			},
+		); err != nil {
+			return m.Offset, err
+		}
+	default:
+		return m.Offset, fmt.Errorf("bad whence")
+	}
+	return m.Offset, nil
 }
 
-func (m *MemHandle) Stat() (fs.FileInfo, error) {
-	//TODO
-	return nil, nil
+func (m *MemHandle) Stat() (info fs.FileInfo, err error) {
+	if err := m.FS.Apply(
+		m.Path,
+		func(file *File) (*File, error) {
+			info = file.Info()
+			return file, nil
+		},
+	); err != nil {
+		return nil, err
+	}
+	return
 }
 
 func (m *MemHandle) Write(data []byte) (n int, err error) {
