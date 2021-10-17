@@ -8,7 +8,7 @@ import (
 type File struct {
 	IsDir   bool
 	Name    string
-	Entries []Entry
+	Entries []DirEntry
 	Size    int64
 	Mode    os.FileMode
 	ModTime time.Time
