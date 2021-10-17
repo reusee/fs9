@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"testing"
-	"testing/fstest"
 
 	"github.com/reusee/e4"
 )
@@ -33,7 +32,7 @@ func testFS(
 		t.Fatal()
 	}
 
-	// fstest
-	ce(fstest.TestFS(fs, "foo"))
+	// fstest TODO
+	//ce(fstest.TestFS(fs, "foo"))
 
 }

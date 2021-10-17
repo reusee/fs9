@@ -2,15 +2,46 @@ package fs9
 
 import (
 	"os"
+	"strings"
 	"time"
+
+	"github.com/reusee/e4"
 )
 
 type File struct {
-	IsDir        bool
-	Name         string
-	Entries      []DirEntry
-	Size         int64
-	Mode         os.FileMode
-	ModTime      time.Time
-	ContentBytes []byte
+	IsDir   bool
+	Name    string
+	Entries DirEntries
+	Size    int64
+	Mode    os.FileMode
+	ModTime time.Time
+	Bytes   []byte
+}
+
+func (f *File) Apply(path []string, op Operation) (*File, error) {
+	we := we.With(
+		e4.NewInfo("path: %s", strings.Join(path, "/")),
+	)
+
+	if len(path) == 0 {
+		return op(f)
+	}
+
+	if !f.IsDir {
+		return nil, we(ErrFileNotFound)
+	}
+
+	// descend
+	newEntries, err := f.Entries.Apply(path, op)
+	if err != nil {
+		return nil, err
+	}
+	if newEntries != nil {
+		newFile := *f
+		newFile.Entries = *newEntries
+		newFile.ModTime = time.Now()
+		return &newFile, nil
+	}
+
+	return f, nil
 }
