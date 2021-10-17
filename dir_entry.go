@@ -38,7 +38,6 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 
 	// descend
 	name := path[0]
-	path = path[1:]
 	i := sort.Search(len(d), func(i int) bool {
 		entry := d[i]
 		if entry.File != nil {
@@ -57,7 +56,7 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 
 	if i >= len(d) {
 		// not found
-		file, err := (*File)(nil).Apply(path, op)
+		file, err := (*File)(nil).Apply(path[1:], op)
 		if err != nil {
 			return nil, err
 		}
@@ -77,7 +76,7 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 	if entry.File != nil {
 		if entry.File.Name != name {
 			// not found
-			file, err := (*File)(nil).Apply(path, op)
+			file, err := (*File)(nil).Apply(path[1:], op)
 			if err != nil {
 				return nil, err
 			}
@@ -95,7 +94,7 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 
 		} else {
 			// found
-			newFile, err := entry.File.Apply(path, op)
+			newFile, err := entry.File.Apply(path[1:], op)
 			if err != nil {
 				return nil, err
 			}
@@ -121,7 +120,7 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 	} else if entry.DirEntries != nil {
 		if entry.DirEntries.MinName() > name {
 			// not found
-			file, err := (*File)(nil).Apply(path, op)
+			file, err := (*File)(nil).Apply(path[1:], op)
 			if err != nil {
 				return nil, err
 			}
