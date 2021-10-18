@@ -23,6 +23,12 @@ func Ensure(
 		file *File,
 	) (*File, error) {
 		if file != nil {
+			if file.Name != name {
+				panic("impossible")
+			}
+			if file.IsDir != isDir {
+				return nil, ErrTypeMismatch
+			}
 			return file, nil
 		}
 		if create {
