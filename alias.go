@@ -1,6 +1,7 @@
 package fs9
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/reusee/e4"
@@ -12,6 +13,7 @@ var (
 	ce = e4.Check
 	we = e4.Wrap
 	pt = fmt.Printf
+	is = errors.Is
 )
 
 type (

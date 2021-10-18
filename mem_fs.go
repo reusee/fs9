@@ -99,12 +99,17 @@ func (m *MemFS) MakeDir(path string) error {
 }
 
 func (m *MemFS) MakeDirAll(path string) error {
+	if path == "" {
+		return nil
+	}
 	parts := strings.Split(path, "/")
 	for i := 0; i < len(parts); i++ {
+		dir := parts[:i+1]
+		name := parts[i]
 		if err := m.Apply(
-			parts[:i+1],
+			dir,
 			Ensure(
-				parts[i],
+				name,
 				true,
 				true,
 			),

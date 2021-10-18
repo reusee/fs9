@@ -32,7 +32,6 @@ func testFS(
 		name := parts[len(parts)-1]
 		dir := strings.Join(parts[:len(parts)-1], "/")
 		path := strings.Join(parts, "/")
-		pt("path %+v\n", parts)
 
 		// make dir
 		err := fs.MakeDirAll(dir)
