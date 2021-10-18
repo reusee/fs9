@@ -27,7 +27,14 @@ func (f *File) Apply(path []string, op Operation) (*File, error) {
 	)
 
 	if len(path) == 0 {
-		return op(f)
+		newFile, err := op(f)
+		if err != nil {
+			return nil, err
+		}
+		if err := f.checkNewFile(newFile); err != nil {
+			return nil, we(err)
+		}
+		return newFile, nil
 	}
 
 	if !f.IsDir {
@@ -64,4 +71,18 @@ func (f *File) Dump(w io.Writer, level int) {
 			return nil
 		}),
 	))
+}
+
+func (f *File) checkNewFile(newFile *File) error {
+	if f == nil || newFile == nil {
+		return nil
+	}
+	// cannot chagne IsDir and Name
+	if newFile.IsDir != f.IsDir {
+		return ErrTypeMismatch
+	}
+	if newFile.Name != f.Name {
+		return ErrNameMismatch
+	}
+	return nil
 }

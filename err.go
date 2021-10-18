@@ -7,4 +7,5 @@ var (
 	ErrFileNotFound = errors.New("file not found")
 	ErrOutOfBounds  = errors.New("out of bounds")
 	ErrTypeMismatch = errors.New("type mismatch")
+	ErrNameMismatch = errors.New("name mismatch")
 )

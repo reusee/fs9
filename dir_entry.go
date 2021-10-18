@@ -98,6 +98,9 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 			if err != nil {
 				return nil, err
 			}
+			if err := entry.File.checkNewFile(newFile); err != nil {
+				return nil, err
+			}
 			if newFile == nil {
 				// delete
 				newEntries := make(DirEntries, 0, len(d)-1)

@@ -2,7 +2,6 @@ package fs9
 
 import (
 	"io/fs"
-	"os"
 	"strings"
 	"sync"
 	"time"
