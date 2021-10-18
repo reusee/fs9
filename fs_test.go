@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	pathpkg "path"
 	"strings"
 	"testing"
 
@@ -16,24 +15,27 @@ func testFS(
 	t *testing.T,
 	fs FS,
 ) {
-	defer he(nil, e4.TestingFatal(t))
+	defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 
 	dirNames := []string{"foo", "bar", "baz", "qux", "quux"}
-	randomPath := func() string {
+	randomPath := func() []string {
 		slice := make([]string, rand.Intn(len(dirNames)))
 		for i := range slice {
 			slice[i] = dirNames[rand.Intn(len(dirNames))]
 		}
 		slice = append(slice, fmt.Sprintf("%d", rand.Int63()))
-		return strings.Join(slice, "/")
+		return slice
 	}
 
 	for i := 0; i < 1024; i++ {
-		path := randomPath()
-		pt("%s\n", path)
+		parts := randomPath()
+		name := parts[len(parts)-1]
+		dir := strings.Join(parts[:len(parts)-1], "/")
+		path := strings.Join(parts, "/")
+		pt("path %+v\n", parts)
 
 		// make dir
-		err := fs.MakeDirAll(pathpkg.Dir(path))
+		err := fs.MakeDirAll(dir)
 		ce(err)
 
 		// write
@@ -48,7 +50,7 @@ func testFS(
 		ce(err)
 		info, err := f.Stat()
 		ce(err)
-		if info.Name() != pathpkg.Base(path) {
+		if info.Name() != name {
 			t.Fatal()
 		}
 		if info.Size() != 3 {
