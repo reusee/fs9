@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrInvalidPath  = errors.New("invalid path")
+	ErrInvalidName  = errors.New("invalid name")
 	ErrFileNotFound = errors.New("file not found")
 	ErrOutOfBounds  = errors.New("out of bounds")
 	ErrTypeMismatch = errors.New("type mismatch")

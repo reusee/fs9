@@ -36,8 +36,13 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 		return nil, we(ErrFileNotFound)
 	}
 
-	// descend
+	// name
 	name := path[0]
+	if name == "" || name == "." || name == ".." {
+		return nil, we(ErrInvalidName)
+	}
+
+	// descend
 	i := sort.Search(len(d), func(i int) bool {
 		entry := d[i]
 		if entry.File != nil {
