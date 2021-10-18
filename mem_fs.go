@@ -2,6 +2,7 @@ package fs9
 
 import (
 	"io/fs"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -74,14 +75,14 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 }
 
 func (m *MemFS) Apply(path []string, op Operation) error {
+	m.Lock()
+	defer m.Unlock()
 	newRoot, err := m.Root.Apply(path, op)
 	if err != nil {
 		return err
 	}
 	if newRoot != nil {
-		m.Lock()
 		m.Root = newRoot
-		m.Unlock()
 	}
 	return nil
 }
