@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/reusee/e4"
-	"github.com/reusee/pp"
 )
 
 type File struct {
@@ -21,10 +20,14 @@ type File struct {
 	Bytes   []byte
 }
 
-func (f *File) Apply(path []string, op Operation) (*File, error) {
-	we := we.With(
-		e4.NewInfo("path: %s", strings.Join(path, "/")),
-	)
+func (f *File) Apply(path []string, op Operation) (newFile *File, err error) {
+	//TODO
+	ce(f.verifyStructure())
+	defer func() {
+		if newFile != nil {
+			ce(newFile.verifyStructure())
+		}
+	}()
 
 	if len(path) == 0 {
 		newFile, err := op(f)
@@ -37,8 +40,12 @@ func (f *File) Apply(path []string, op Operation) (*File, error) {
 		return newFile, nil
 	}
 
+	if f == nil {
+		return nil, we(ErrInvalidPath)
+	}
+
 	if !f.IsDir {
-		return nil, we(ErrFileNotFound)
+		return nil, we(ErrInvalidPath)
 	}
 
 	// descend
@@ -66,14 +73,14 @@ func (f *File) Dump(w io.Writer, level int) {
 	if w == nil {
 		w = os.Stdout
 	}
-	fmt.Fprintf(w, "%s%s\n", strings.Repeat(" ", level), f.Name)
-	ce(pp.Copy(
-		f.Entries.IterFiles(nil),
-		pp.Tap(func(v any) error {
-			v.(*File).Dump(w, level+1)
-			return nil
-		}),
-	))
+	fmt.Fprintf(w, "%s%s\n", strings.Repeat(".", level), f.Name)
+	f.Entries.Dump(w, level+1)
+}
+
+func (f *File) wrapDump() e4.WrapFunc {
+	buf := new(strings.Builder)
+	f.Dump(buf, 0)
+	return e4.NewInfo("%s", buf.String())
 }
 
 func (f *File) checkNewFile(newFile *File) error {
@@ -88,4 +95,11 @@ func (f *File) checkNewFile(newFile *File) error {
 		return ErrNameMismatch
 	}
 	return nil
+}
+
+func (f *File) verifyStructure() error {
+	if f == nil {
+		return nil
+	}
+	return f.Entries.verifyStructure()
 }

@@ -1,10 +1,13 @@
 package fs9
 
 import (
+	"fmt"
+	"io"
 	"sort"
 	"strings"
 
 	"github.com/reusee/e4"
+	"github.com/reusee/pp"
 )
 
 type DirEntry struct {
@@ -28,6 +31,14 @@ func (d DirEntries) MinName() string {
 }
 
 func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, err error) {
+	//TODO
+	ce(d.verifyStructure())
+	defer func() {
+		if newEntries != nil {
+			ce(newEntries.verifyStructure())
+		}
+	}()
+
 	we := we.With(
 		e4.NewInfo("path: %s", strings.Join(path, "/")),
 	)
@@ -59,7 +70,7 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 		}
 	}()
 
-	if i >= len(d) {
+	if i == len(d) {
 		// not found
 		file, err := (*File)(nil).Apply(path[1:], op)
 		if err != nil {
@@ -67,7 +78,7 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 		}
 		if file != nil {
 			// append
-			newEntries := make(DirEntries, len(d))
+			newEntries := make(DirEntries, len(d), len(d)+1)
 			copy(newEntries, d)
 			newEntries = append(newEntries, DirEntry{
 				File: file,
@@ -119,7 +130,7 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 				newEntries = append(newEntries, DirEntry{
 					File: newFile,
 				})
-				newEntries = append(newEntries, d[:i+1]...)
+				newEntries = append(newEntries, d[i+1:]...)
 				return &newEntries, nil
 			}
 			return nil, nil
@@ -163,4 +174,74 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 	}
 
 	panic("impossible")
+}
+
+func (d DirEntries) Dump(w io.Writer, level int) {
+	ce(pp.Copy(
+		d.IterFiles(nil),
+		pp.Tap(func(v any) error {
+			v.(*File).Dump(w, level)
+			return nil
+		}),
+	))
+}
+
+func (d DirEntries) wrapDump() e4.WrapFunc {
+	buf := new(strings.Builder)
+	d.Dump(buf, 0)
+	return e4.NewInfo("%s", buf.String())
+}
+
+func (d DirEntries) verifyStructure() error {
+
+	// names
+	names := make(map[string]bool)
+	ce(pp.Copy(
+		d.IterFiles(nil),
+		pp.Tap(func(v any) error {
+			name := v.(*File).Name
+			if _, ok := names[name]; ok {
+				return we.With(
+					d.wrapDump(),
+				)(fmt.Errorf("duplicated name"))
+			}
+			names[name] = true
+			return nil
+		}),
+	))
+
+	// order
+	var idx []int
+	for i := range d {
+		idx = append(idx, i)
+	}
+	sort.SliceStable(idx, func(i, j int) bool {
+		a := d[i]
+		b := d[j]
+		if a.File != nil {
+			if b.File != nil {
+				return a.File.Name < b.File.Name
+			} else if b.DirEntries != nil {
+				return a.File.Name < b.DirEntries.MinName()
+			}
+			panic("impossible")
+		} else if a.DirEntries != nil {
+			if b.File != nil {
+				return a.DirEntries.MinName() < b.File.Name
+			} else if b.DirEntries != nil {
+				return a.DirEntries.MinName() < b.DirEntries.MinName()
+			}
+		}
+		panic("impossible")
+	})
+	for i, j := range idx {
+		if i != j {
+			return ce.With(
+				d.wrapDump(),
+				e4.NewInfo("order: %+v", idx),
+			)(fmt.Errorf("invalid order"))
+		}
+	}
+
+	return nil
 }
