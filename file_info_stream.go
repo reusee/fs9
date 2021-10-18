@@ -16,3 +16,20 @@ func (d DirEntries) IterFileInfos(cont Src) Src {
 		panic("impossible")
 	}
 }
+
+func (d DirEntries) IterFiles(cont Src) Src {
+	return func() (any, Src, error) {
+		if len(d) == 0 {
+			return nil, cont, nil
+		}
+		item := d[0]
+		if item.File != nil {
+			return item.File, d[1:].IterFiles(cont), nil
+		} else if item.DirEntries != nil {
+			return nil, item.DirEntries.IterFiles(
+				d[:1].IterFiles(cont),
+			), nil
+		}
+		panic("impossible")
+	}
+}
