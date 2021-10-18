@@ -21,7 +21,7 @@ type File struct {
 	Bytes   []byte
 }
 
-func (f *File) Apply(path []string, op Operation) (*File, error) {
+func (f *File) apply(path []string, op Operation) (*File, error) {
 	we := we.With(
 		e4.NewInfo("path: %s", strings.Join(path, "/")),
 	)
@@ -63,6 +63,9 @@ func (f *File) Info() FileInfo {
 }
 
 func (f *File) Dump(w io.Writer, level int) {
+	if w == nil {
+		w = os.Stdout
+	}
 	fmt.Fprintf(w, "%s%s\n", strings.Repeat(" ", level), f.Name)
 	ce(pp.Copy(
 		f.Entries.IterFiles(nil),
