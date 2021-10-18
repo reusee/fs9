@@ -30,7 +30,7 @@ func (f FileInfo) ModTime() time.Time {
 }
 
 func (f FileInfo) Type() fs.FileMode {
-	return f.File.Mode | fs.ModeType
+	return f.File.Mode & fs.ModeType
 }
 
 func (f FileInfo) Mode() fs.FileMode {

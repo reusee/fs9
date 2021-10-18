@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/reusee/e4"
 )
@@ -27,11 +28,14 @@ func testFS(
 		return slice
 	}
 
+	var allPaths []string
+
 	for i := 0; i < 1024; i++ {
 		parts := randomPath()
 		name := parts[len(parts)-1]
 		dir := strings.Join(parts[:len(parts)-1], "/")
 		path := strings.Join(parts, "/")
+		allPaths = append(allPaths, path)
 
 		// make dir
 		err := fs.MakeDirAll(dir)
@@ -65,7 +69,7 @@ func testFS(
 
 	}
 
-	// fstest TODO
-	//ce(fstest.TestFS(fs, "foo"))
+	// fstest
+	ce(fstest.TestFS(fs, allPaths...))
 
 }

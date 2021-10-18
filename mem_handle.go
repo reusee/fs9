@@ -12,10 +12,11 @@ import (
 
 type MemHandle struct {
 	sync.Mutex
-	FS     *MemFS
-	Path   []string
-	Offset int64
-	iter   Src
+	FS          *MemFS
+	Path        []string
+	Offset      int64
+	iterStarted bool
+	iter        Src
 }
 
 var _ fs.ReadDirFile = new(MemHandle)
@@ -99,11 +100,12 @@ func (m *MemHandle) Write(data []byte) (n int, err error) {
 func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 	m.Lock()
 	defer m.Unlock()
-	if m.iter == nil {
+	if !m.iterStarted {
 		err := m.FS.Apply(
 			m.Path,
 			func(file *File) (*File, error) {
 				m.iter = file.Entries.IterFileInfos(nil)
+				m.iterStarted = true
 				return file, nil
 			},
 		)

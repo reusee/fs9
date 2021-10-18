@@ -26,17 +26,15 @@ func Ensure(
 			if file.Name != name {
 				panic("impossible")
 			}
-			if file.IsDir != isDir {
-				return nil, ErrTypeMismatch
+			if create {
+				if file.IsDir != isDir {
+					return nil, ErrTypeMismatch
+				}
 			}
 			return file, nil
 		}
 		if create {
-			return &File{
-				Name:    name,
-				IsDir:   isDir,
-				ModTime: time.Now(),
-			}, nil
+			return NewFile(name, isDir), nil
 		}
 		return nil, ErrFileNotFound
 	}

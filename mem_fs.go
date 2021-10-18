@@ -4,7 +4,6 @@ import (
 	"io/fs"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/reusee/e4"
 )
@@ -18,11 +17,7 @@ var _ FS = new(MemFS)
 
 func NewMemFS() *MemFS {
 	return &MemFS{
-		Root: &File{
-			IsDir:   true,
-			Name:    "_root_",
-			ModTime: time.Now(),
-		},
+		Root: NewFile("_root_", true),
 	}
 }
 
