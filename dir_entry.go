@@ -31,13 +31,12 @@ func (d DirEntries) MinName() string {
 }
 
 func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, err error) {
-	//TODO
-	ce(d.verifyStructure())
-	defer func() {
-		if newEntries != nil {
-			ce(newEntries.verifyStructure())
-		}
-	}()
+	//ce(d.verifyStructure())
+	//defer func() {
+	//	if newEntries != nil {
+	//		ce(newEntries.verifyStructure())
+	//	}
+	//}()
 
 	we := we.With(
 		e4.NewInfo("path: %s", strings.Join(path, "/")),

@@ -35,13 +35,12 @@ func NewFile(name string, isDir bool) *File {
 }
 
 func (f *File) Apply(path []string, op Operation) (newFile *File, err error) {
-	//TODO
-	ce(f.verifyStructure())
-	defer func() {
-		if newFile != nil {
-			ce(newFile.verifyStructure())
-		}
-	}()
+	//ce(f.verifyStructure())
+	//defer func() {
+	//	if newFile != nil {
+	//		ce(newFile.verifyStructure())
+	//	}
+	//}()
 
 	if len(path) == 0 {
 		newFile, err := op(f)
