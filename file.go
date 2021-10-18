@@ -3,6 +3,7 @@ package fs9
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"strings"
 	"time"
@@ -18,6 +19,19 @@ type File struct {
 	Mode    os.FileMode
 	ModTime time.Time
 	Bytes   []byte
+}
+
+func NewFile(name string, isDir bool) *File {
+	var mode fs.FileMode
+	if isDir {
+		mode |= fs.ModeDir
+	}
+	return &File{
+		IsDir:   isDir,
+		Name:    name,
+		ModTime: time.Now(),
+		Mode:    mode,
+	}
 }
 
 func (f *File) Apply(path []string, op Operation) (newFile *File, err error) {
