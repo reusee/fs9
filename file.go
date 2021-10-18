@@ -1,11 +1,14 @@
 package fs9
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/reusee/e4"
+	"github.com/reusee/pp"
 )
 
 type File struct {
@@ -50,4 +53,15 @@ func (f *File) Info() FileInfo {
 	return FileInfo{
 		File: f,
 	}
+}
+
+func (f *File) Dump(w io.Writer, level int) {
+	fmt.Fprintf(w, "%s%s\n", strings.Repeat(" ", level), f.Name)
+	ce(pp.Copy(
+		f.Entries.IterFiles(nil),
+		pp.Tap(func(v any) error {
+			v.(*File).Dump(w, level+1)
+			return nil
+		}),
+	))
 }
