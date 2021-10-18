@@ -21,7 +21,7 @@ type File struct {
 	Bytes   []byte
 }
 
-func (f *File) apply(path []string, op Operation) (*File, error) {
+func (f *File) Apply(path []string, op Operation) (*File, error) {
 	we := we.With(
 		e4.NewInfo("path: %s", strings.Join(path, "/")),
 	)
