@@ -66,7 +66,14 @@ func (f *File) Apply(path []string, op Operation) (newFile *File, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if newEntries != nil {
+	if newEntries == nil {
+		// delete
+		newFile := *f
+		newFile.Entries = nil
+		newFile.ModTime = time.Now()
+		return &newFile, nil
+	} else if newEntries != &f.Entries {
+		// replace
 		newFile := *f
 		newFile.Entries = *newEntries
 		newFile.ModTime = time.Now()

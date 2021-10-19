@@ -30,7 +30,7 @@ func (d DirEntries) MinName() string {
 	panic("impossible")
 }
 
-func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, err error) {
+func (d *DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, err error) {
 	//ce(d.verifyStructure())
 	//defer func() {
 	//	if newEntries != nil {
@@ -52,9 +52,11 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 		return nil, we(ErrInvalidName)
 	}
 
+	entries := *d
+
 	// descend
-	i := sort.Search(len(d), func(i int) bool {
-		entry := d[i]
+	i := sort.Search(len(entries), func(i int) bool {
+		entry := entries[i]
 		if entry.File != nil {
 			return entry.File.Name >= name
 		} else if entry.DirEntries != nil {
@@ -69,7 +71,7 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 		}
 	}()
 
-	if i == len(d) {
+	if i == len(entries) {
 		// not found
 		file, err := (*File)(nil).Apply(path[1:], op)
 		if err != nil {
@@ -77,17 +79,17 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 		}
 		if file != nil {
 			// append
-			newEntries := make(DirEntries, len(d), len(d)+1)
-			copy(newEntries, d)
+			newEntries := make(DirEntries, len(entries), len(entries)+1)
+			copy(newEntries, entries)
 			newEntries = append(newEntries, DirEntry{
 				File: file,
 			})
 			return &newEntries, nil
 		}
-		return nil, nil
+		return d, nil
 	}
 
-	entry := d[i]
+	entry := entries[i]
 	if entry.File != nil {
 		if entry.File.Name != name {
 			// not found
@@ -97,15 +99,15 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 			}
 			if file != nil {
 				// insert
-				newEntries := make(DirEntries, 0, len(d)+1)
-				newEntries = append(newEntries, d[:i]...)
+				newEntries := make(DirEntries, 0, len(entries)+1)
+				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, DirEntry{
 					File: file,
 				})
-				newEntries = append(newEntries, d[i:]...)
+				newEntries = append(newEntries, entries[i:]...)
 				return &newEntries, nil
 			}
-			return nil, nil
+			return d, nil
 
 		} else {
 			// found
@@ -118,21 +120,21 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 			}
 			if newFile == nil {
 				// delete
-				newEntries := make(DirEntries, 0, len(d)-1)
-				newEntries = append(newEntries, d[:i]...)
-				newEntries = append(newEntries, d[i+1:]...)
+				newEntries := make(DirEntries, 0, len(entries)-1)
+				newEntries = append(newEntries, entries[:i]...)
+				newEntries = append(newEntries, entries[i+1:]...)
 				return &newEntries, nil
 			} else if newFile != entry.File {
 				// replace
-				newEntries := make(DirEntries, 0, len(d))
-				newEntries = append(newEntries, d[:i]...)
+				newEntries := make(DirEntries, 0, len(entries))
+				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, DirEntry{
 					File: newFile,
 				})
-				newEntries = append(newEntries, d[i+1:]...)
+				newEntries = append(newEntries, entries[i+1:]...)
 				return &newEntries, nil
 			}
-			return nil, nil
+			return d, nil
 		}
 
 	} else if entry.DirEntries != nil {
@@ -144,32 +146,38 @@ func (d DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, 
 			}
 			if file != nil {
 				// insert
-				newEntries := make(DirEntries, 0, len(d)+1)
-				newEntries = append(newEntries, d[:i]...)
+				newEntries := make(DirEntries, 0, len(entries)+1)
+				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, DirEntry{
 					File: file,
 				})
-				newEntries = append(newEntries, d[i:]...)
+				newEntries = append(newEntries, entries[i:]...)
 				return &newEntries, nil
 			}
-			return nil, nil
+			return d, nil
 		}
 
 		newSubEntries, err := entry.DirEntries.Apply(path, op)
 		if err != nil {
 			return nil, err
 		}
-		if newSubEntries != nil {
+		if newSubEntries == nil {
+			// remove
+			newEntries := make(DirEntries, 0, len(entries)-1)
+			newEntries = append(newEntries, entries[:i]...)
+			newEntries = append(newEntries, entries[i+1:]...)
+			return &newEntries, nil
+		} else if newSubEntries != entry.DirEntries {
 			// replace
-			newEntries := make(DirEntries, 0, len(d))
-			newEntries = append(newEntries, d[:i]...)
+			newEntries := make(DirEntries, 0, len(entries))
+			newEntries = append(newEntries, entries[:i]...)
 			newEntries = append(newEntries, DirEntry{
 				DirEntries: newSubEntries,
 			})
-			newEntries = append(newEntries, d[i+1:]...)
+			newEntries = append(newEntries, entries[i+1:]...)
 			return &newEntries, nil
 		}
-		return nil, nil
+		return d, nil
 	}
 
 	panic("impossible")

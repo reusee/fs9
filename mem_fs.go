@@ -75,7 +75,7 @@ func (m *MemFS) Apply(path []string, op Operation) error {
 	if err != nil {
 		return err
 	}
-	if newRoot != nil {
+	if newRoot != m.Root {
 		m.Root = newRoot
 	}
 	return nil
