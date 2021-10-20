@@ -5,11 +5,11 @@ func (d DirEntries) IterFileInfos(cont Src) Src {
 		if len(d) == 0 {
 			return nil, cont, nil
 		}
-		item := d[0]
-		if item.File != nil {
-			return item.File.Info(), d[1:].IterFileInfos(cont), nil
-		} else if item.DirEntries != nil {
-			return nil, item.DirEntries.IterFileInfos(
+		switch item := d[0].Latest().(type) {
+		case *File:
+			return item.Info(), d[1:].IterFileInfos(cont), nil
+		case *DirEntries:
+			return nil, item.IterFileInfos(
 				d[:1].IterFileInfos(cont),
 			), nil
 		}
@@ -22,11 +22,11 @@ func (d DirEntries) IterFiles(cont Src) Src {
 		if len(d) == 0 {
 			return nil, cont, nil
 		}
-		item := d[0]
-		if item.File != nil {
-			return item.File, d[1:].IterFiles(cont), nil
-		} else if item.DirEntries != nil {
-			return nil, item.DirEntries.IterFiles(
+		switch item := d[0].Latest().(type) {
+		case *File:
+			return item, d[1:].IterFiles(cont), nil
+		case *DirEntries:
+			return nil, item.IterFiles(
 				d[:1].IterFiles(cont),
 			), nil
 		}

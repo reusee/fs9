@@ -10,7 +10,8 @@ import (
 
 type MemFS struct {
 	sync.RWMutex
-	Root *File
+	version int64
+	Root    *File
 }
 
 var _ FS = new(MemFS)
@@ -71,7 +72,8 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 func (m *MemFS) Apply(path []string, op Operation) error {
 	m.Lock()
 	defer m.Unlock()
-	newRoot, err := m.Root.Apply(path, op)
+	m.version++
+	newRoot, err := m.Root.Apply(m.version, path, op)
 	if err != nil {
 		return err
 	}

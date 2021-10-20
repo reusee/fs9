@@ -10,27 +10,53 @@ import (
 	"github.com/reusee/pp"
 )
 
-type DirEntry struct {
+// DirEntry is a versioned fat-node
+type DirEntry map[int64]DirEntryValue
+
+type DirEntryValue struct {
 	File       *File
 	DirEntries *DirEntries
+}
+
+const maxDirEntryLen = 4
+
+func (d DirEntry) Latest() any {
+	var lastVersion = int64(-1)
+	var lastItem any
+	for v, i := range d {
+		if v > lastVersion {
+			lastVersion = v
+			if i.File != nil {
+				lastItem = i.File
+			} else if i.DirEntries != nil {
+				lastItem = i.DirEntries
+			} else {
+				panic("impossible")
+			}
+		}
+	}
+	if lastItem == nil {
+		panic("impossible")
+	}
+	return lastItem
 }
 
 type DirEntries []DirEntry
 
 func (d DirEntries) MinName() string {
 	if len(d) == 0 {
-		return ""
+		panic("impossible")
 	}
-	entry := d[0]
-	if entry.File != nil {
-		return entry.File.Name
-	} else if entry.DirEntries != nil {
-		return entry.DirEntries.MinName()
+	switch item := d[0].Latest().(type) {
+	case *File:
+		return item.Name
+	case *DirEntries:
+		return item.MinName()
 	}
 	panic("impossible")
 }
 
-func (d *DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries, err error) {
+func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntries *DirEntries, err error) {
 	//ce(d.verifyStructure())
 	//defer func() {
 	//	if newEntries != nil {
@@ -56,11 +82,11 @@ func (d *DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries,
 
 	// descend
 	i := sort.Search(len(entries), func(i int) bool {
-		entry := entries[i]
-		if entry.File != nil {
-			return entry.File.Name >= name
-		} else if entry.DirEntries != nil {
-			return entry.DirEntries.MinName() >= name
+		switch item := entries[i].Latest().(type) {
+		case *File:
+			return item.Name >= name
+		case *DirEntries:
+			return item.MinName() >= name
 		}
 		panic("impossible")
 	})
@@ -73,7 +99,7 @@ func (d *DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries,
 
 	if i == len(entries) {
 		// not found
-		file, err := (*File)(nil).Apply(path[1:], op)
+		file, err := (*File)(nil).Apply(version, path[1:], op)
 		if err != nil {
 			return nil, err
 		}
@@ -82,18 +108,21 @@ func (d *DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries,
 			newEntries := make(DirEntries, len(entries), len(entries)+1)
 			copy(newEntries, entries)
 			newEntries = append(newEntries, DirEntry{
-				File: file,
+				version: {
+					File: file,
+				},
 			})
 			return &newEntries, nil
 		}
 		return d, nil
 	}
 
-	entry := entries[i]
-	if entry.File != nil {
-		if entry.File.Name != name {
+	switch item := entries[i].Latest().(type) {
+
+	case *File:
+		if item.Name != name {
 			// not found
-			file, err := (*File)(nil).Apply(path[1:], op)
+			file, err := (*File)(nil).Apply(version, path[1:], op)
 			if err != nil {
 				return nil, err
 			}
@@ -102,7 +131,9 @@ func (d *DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries,
 				newEntries := make(DirEntries, 0, len(entries)+1)
 				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, DirEntry{
-					File: file,
+					version: {
+						File: file,
+					},
 				})
 				newEntries = append(newEntries, entries[i:]...)
 				return &newEntries, nil
@@ -111,11 +142,11 @@ func (d *DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries,
 
 		} else {
 			// found
-			newFile, err := entry.File.Apply(path[1:], op)
+			newFile, err := item.Apply(version, path[1:], op)
 			if err != nil {
 				return nil, err
 			}
-			if err := entry.File.checkNewFile(newFile); err != nil {
+			if err := item.checkNewFile(newFile); err != nil {
 				return nil, err
 			}
 			if newFile == nil {
@@ -124,23 +155,32 @@ func (d *DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries,
 				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, entries[i+1:]...)
 				return &newEntries, nil
-			} else if newFile != entry.File {
+			} else if newFile != item {
 				// replace
-				newEntries := make(DirEntries, 0, len(entries))
-				newEntries = append(newEntries, entries[:i]...)
-				newEntries = append(newEntries, DirEntry{
-					File: newFile,
-				})
-				newEntries = append(newEntries, entries[i+1:]...)
-				return &newEntries, nil
+				if len(entries[i]) < maxDirEntryLen {
+					entries[i][version] = DirEntryValue{
+						File: newFile,
+					}
+					return d, nil
+				} else {
+					newEntries := make(DirEntries, 0, len(entries))
+					newEntries = append(newEntries, entries[:i]...)
+					newEntries = append(newEntries, DirEntry{
+						version: {
+							File: newFile,
+						},
+					})
+					newEntries = append(newEntries, entries[i+1:]...)
+					return &newEntries, nil
+				}
 			}
 			return d, nil
 		}
 
-	} else if entry.DirEntries != nil {
-		if entry.DirEntries.MinName() > name {
+	case *DirEntries:
+		if item.MinName() > name {
 			// not found
-			file, err := (*File)(nil).Apply(path[1:], op)
+			file, err := (*File)(nil).Apply(version, path[1:], op)
 			if err != nil {
 				return nil, err
 			}
@@ -149,7 +189,9 @@ func (d *DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries,
 				newEntries := make(DirEntries, 0, len(entries)+1)
 				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, DirEntry{
-					File: file,
+					version: {
+						File: file,
+					},
 				})
 				newEntries = append(newEntries, entries[i:]...)
 				return &newEntries, nil
@@ -157,7 +199,7 @@ func (d *DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries,
 			return d, nil
 		}
 
-		newSubEntries, err := entry.DirEntries.Apply(path, op)
+		newSubEntries, err := item.Apply(version, path, op)
 		if err != nil {
 			return nil, err
 		}
@@ -167,17 +209,27 @@ func (d *DirEntries) Apply(path []string, op Operation) (newEntries *DirEntries,
 			newEntries = append(newEntries, entries[:i]...)
 			newEntries = append(newEntries, entries[i+1:]...)
 			return &newEntries, nil
-		} else if newSubEntries != entry.DirEntries {
+		} else if newSubEntries != item {
 			// replace
-			newEntries := make(DirEntries, 0, len(entries))
-			newEntries = append(newEntries, entries[:i]...)
-			newEntries = append(newEntries, DirEntry{
-				DirEntries: newSubEntries,
-			})
-			newEntries = append(newEntries, entries[i+1:]...)
-			return &newEntries, nil
+			if len(entries[i]) < maxDirEntryLen {
+				entries[i][version] = DirEntryValue{
+					DirEntries: newSubEntries,
+				}
+				return d, nil
+			} else {
+				newEntries := make(DirEntries, 0, len(entries))
+				newEntries = append(newEntries, entries[:i]...)
+				newEntries = append(newEntries, DirEntry{
+					version: {
+						DirEntries: newSubEntries,
+					},
+				})
+				newEntries = append(newEntries, entries[i+1:]...)
+				return &newEntries, nil
+			}
 		}
 		return d, nil
+
 	}
 
 	panic("impossible")
@@ -225,18 +277,21 @@ func (d DirEntries) verifyStructure() error {
 	sort.SliceStable(idx, func(i, j int) bool {
 		a := d[i]
 		b := d[j]
-		if a.File != nil {
-			if b.File != nil {
-				return a.File.Name < b.File.Name
-			} else if b.DirEntries != nil {
-				return a.File.Name < b.DirEntries.MinName()
+		switch a := a.Latest().(type) {
+		case *File:
+			switch b := b.Latest().(type) {
+			case *File:
+				return a.Name < b.Name
+			case *DirEntries:
+				return a.Name < b.MinName()
 			}
 			panic("impossible")
-		} else if a.DirEntries != nil {
-			if b.File != nil {
-				return a.DirEntries.MinName() < b.File.Name
-			} else if b.DirEntries != nil {
-				return a.DirEntries.MinName() < b.DirEntries.MinName()
+		case *DirEntries:
+			switch b := b.Latest().(type) {
+			case *File:
+				return a.MinName() < b.Name
+			case *DirEntries:
+				return a.MinName() < b.MinName()
 			}
 		}
 		panic("impossible")

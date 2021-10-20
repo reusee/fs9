@@ -19,35 +19,39 @@ func TestMemFSOperations(t *testing.T) {
 	fs := NewMemFS()
 
 	ce(fs.Apply([]string{"foo"}, Ensure("foo", false, true)))
+	file := fs.Root.Entries[0].Latest().(*File)
 	eq(
 		len(fs.Root.Entries), 1,
-		fs.Root.Entries[0].File != nil, true,
-		fs.Root.Entries[0].File.Name, "foo",
-		fs.Root.Entries[0].File.IsDir, false,
+		file != nil, true,
+		file.Name, "foo",
+		file.IsDir, false,
 	)
 
 	ce(fs.Apply([]string{"foo"}, Ensure("foo", false, true)))
+	file = fs.Root.Entries[0].Latest().(*File)
 	eq(
 		len(fs.Root.Entries), 1,
-		fs.Root.Entries[0].File != nil, true,
-		fs.Root.Entries[0].File.Name, "foo",
-		fs.Root.Entries[0].File.IsDir, false,
+		file != nil, true,
+		file.Name, "foo",
+		file.IsDir, false,
 	)
 
 	ce(fs.Apply([]string{"a"}, Ensure("a", false, true)))
+	file = fs.Root.Entries[0].Latest().(*File)
 	eq(
 		len(fs.Root.Entries), 2,
-		fs.Root.Entries[0].File != nil, true,
-		fs.Root.Entries[0].File.Name, "a",
-		fs.Root.Entries[0].File.IsDir, false,
+		file != nil, true,
+		file.Name, "a",
+		file.IsDir, false,
 	)
 
 	ce(fs.Apply([]string{"b"}, Ensure("b", true, true)))
+	file = fs.Root.Entries[1].Latest().(*File)
 	eq(
 		len(fs.Root.Entries), 3,
-		fs.Root.Entries[1].File != nil, true,
-		fs.Root.Entries[1].File.Name, "b",
-		fs.Root.Entries[1].File.IsDir, true,
+		file != nil, true,
+		file.Name, "b",
+		file.IsDir, true,
 	)
 
 	err := fs.Apply([]string{"a"}, func(file *File) (*File, error) {
