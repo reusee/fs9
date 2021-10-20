@@ -111,4 +111,100 @@ func testFS(
 		}
 	})
 
+	t.Run("concurrent handle", func(t *testing.T) {
+		fs := newFS()
+
+		// write
+		handle1, err := fs.OpenHandle("foo", OptCreate(true))
+		ce(err)
+		_, err = handle1.Write([]byte("foo"))
+		ce(err)
+
+		// same file
+		handle2, err := fs.OpenHandle("foo", OptCreate(true))
+		ce(err)
+		content, err := io.ReadAll(handle2)
+		ce(err)
+		eq(
+			bytes.Equal(content, []byte("foo")), true,
+		)
+
+		// remove
+		ce(fs.Remove("foo"))
+
+		// read deleted
+		_, err = handle1.Seek(0, 0)
+		ce(err)
+		content, err = io.ReadAll(handle1)
+		ce(err)
+		eq(
+			bytes.Equal(content, []byte("foo")), true,
+		)
+
+		// new file
+		handle3, err := fs.OpenHandle("foo", OptCreate(true))
+		ce(err)
+		_, err = handle3.Write([]byte("bar"))
+		ce(err)
+
+		// read deleted
+		_, err = handle2.Seek(0, 0)
+		ce(err)
+		content, err = io.ReadAll(handle2)
+		ce(err)
+		eq(
+			bytes.Equal(content, []byte("foo")), true,
+		)
+
+		// write deleted
+		_, err = handle1.Seek(0, 0)
+		ce(err)
+		_, err = handle1.Write([]byte("FOO"))
+		ce(err)
+		// read written
+		_, err = handle2.Seek(0, 0)
+		ce(err)
+		content, err = io.ReadAll(handle2)
+		ce(err)
+		eq(
+			bytes.Equal(content, []byte("FOO")), true,
+		)
+
+		// read new file
+		_, err = handle3.Seek(0, 0)
+		content, err = io.ReadAll(handle3)
+		ce(err)
+		eq(
+			bytes.Equal(content, []byte("bar")), true,
+		)
+
+		// close new file
+		ce(handle3.Close())
+
+		// read deleted
+		_, err = handle2.Seek(0, 0)
+		ce(err)
+		content, err = io.ReadAll(handle2)
+		ce(err)
+		eq(
+			bytes.Equal(content, []byte("FOO")), true,
+		)
+
+		// new file again
+		handle3, err = fs.OpenHandle("foo", OptCreate(true))
+		ce(err)
+		_, err = handle3.Write([]byte("bar"))
+		ce(err)
+
+		// read deleted
+		_, err = handle2.Seek(0, 0)
+		ce(err)
+		content, err = io.ReadAll(handle2)
+		ce(err)
+		eq(
+			bytes.Equal(content, []byte("FOO")), true,
+		)
+
+	})
+
 }

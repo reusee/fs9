@@ -10,19 +10,19 @@ import (
 
 type MemFS struct {
 	sync.RWMutex
-	version       int64
-	Root          *File
-	handleCounter map[string]int
-	detached      map[int64]*File
+	version   int64
+	Root      *File
+	openedIDs map[int64]int
+	detached  map[int64]*File
 }
 
 var _ FS = new(MemFS)
 
 func NewMemFS() *MemFS {
 	return &MemFS{
-		Root:          NewFile("_root_", true),
-		handleCounter: make(map[string]int),
-		detached:      make(map[int64]*File),
+		Root:      NewFile("_root_", true),
+		openedIDs: make(map[int64]int),
+		detached:  make(map[int64]*File),
 	}
 }
 
@@ -76,7 +76,7 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 		panic("impossible")
 	}
 
-	m.handleCounter[path]++
+	m.openedIDs[id]++
 	handle := &MemHandle{
 		FS:   m,
 		Path: pathParts,
@@ -85,7 +85,7 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 			func() {
 				m.Lock()
 				defer m.Unlock()
-				m.handleCounter[path]--
+				m.openedIDs[id]--
 			},
 		},
 	}
@@ -98,24 +98,24 @@ func (m *MemFS) Apply(path []string, id int64, op Operation) error {
 	defer m.Unlock()
 	m.version++
 
-	detached := false
 	newRoot, err := m.Root.Apply(m.version, path, func(file *File) (*File, error) {
 
-		if id > 0 && file.id != id {
+		if id > 0 && (file == nil || file.id != id) {
 			// detached
-			detached = true
-			file, ok := m.detached[id]
+			detached, ok := m.detached[id]
 			if !ok {
 				panic("impossible")
 			}
-			newFile, err := op(file)
+			newFile, err := op(detached)
 			if err != nil {
 				return nil, err
 			}
-			if newFile != file {
+			if newFile != detached {
 				m.detached[id] = newFile
 			}
-			return newFile, nil
+
+			// return origin file to avoid updating the tree
+			return file, nil
 		}
 
 		return op(file)
@@ -124,10 +124,8 @@ func (m *MemFS) Apply(path []string, id int64, op Operation) error {
 		return err
 	}
 
-	if !detached {
-		if newRoot != m.Root {
-			m.Root = newRoot
-		}
+	if newRoot != m.Root {
+		m.Root = newRoot
 	}
 
 	return nil
@@ -186,7 +184,7 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 					e4.NewInfo("path: %s", path),
 				)(ErrDirNotEmpty)
 			}
-			if m.handleCounter[path] > 0 {
+			if m.openedIDs[file.id] > 0 {
 				// add to detached files
 				if _, ok := m.detached[file.id]; !ok {
 					m.detached[file.id] = file
