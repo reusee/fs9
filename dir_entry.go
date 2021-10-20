@@ -11,9 +11,10 @@ import (
 )
 
 // DirEntry is a versioned fat-node
-type DirEntry map[int64]DirEntryValue
+type DirEntry []DirEntryValue
 
 type DirEntryValue struct {
+	version    int64
 	File       *File
 	DirEntries *DirEntries
 }
@@ -21,24 +22,13 @@ type DirEntryValue struct {
 const maxDirEntryLen = 4
 
 func (d DirEntry) Latest() any {
-	var lastVersion = int64(-1)
-	var lastItem any
-	for v, i := range d {
-		if v > lastVersion {
-			lastVersion = v
-			if i.File != nil {
-				lastItem = i.File
-			} else if i.DirEntries != nil {
-				lastItem = i.DirEntries
-			} else {
-				panic("impossible")
-			}
-		}
+	value := d[len(d)-1]
+	if value.File != nil {
+		return value.File
+	} else if value.DirEntries != nil {
+		return value.DirEntries
 	}
-	if lastItem == nil {
-		panic("impossible")
-	}
-	return lastItem
+	panic("impossible")
 }
 
 type DirEntries []DirEntry
@@ -108,8 +98,9 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 			newEntries := make(DirEntries, len(entries), len(entries)+1)
 			copy(newEntries, entries)
 			newEntries = append(newEntries, DirEntry{
-				version: {
-					File: file,
+				{
+					version: version,
+					File:    file,
 				},
 			})
 			return &newEntries, nil
@@ -131,8 +122,9 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 				newEntries := make(DirEntries, 0, len(entries)+1)
 				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, DirEntry{
-					version: {
-						File: file,
+					{
+						version: version,
+						File:    file,
 					},
 				})
 				newEntries = append(newEntries, entries[i:]...)
@@ -158,16 +150,18 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 			} else if newFile != item {
 				// replace
 				if len(entries[i]) < maxDirEntryLen {
-					entries[i][version] = DirEntryValue{
-						File: newFile,
-					}
+					entries[i] = append(entries[i], DirEntryValue{
+						version: version,
+						File:    newFile,
+					})
 					return d, nil
 				} else {
 					newEntries := make(DirEntries, 0, len(entries))
 					newEntries = append(newEntries, entries[:i]...)
 					newEntries = append(newEntries, DirEntry{
-						version: {
-							File: newFile,
+						{
+							version: version,
+							File:    newFile,
 						},
 					})
 					newEntries = append(newEntries, entries[i+1:]...)
@@ -189,8 +183,9 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 				newEntries := make(DirEntries, 0, len(entries)+1)
 				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, DirEntry{
-					version: {
-						File: file,
+					{
+						version: version,
+						File:    file,
 					},
 				})
 				newEntries = append(newEntries, entries[i:]...)
@@ -212,15 +207,17 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 		} else if newSubEntries != item {
 			// replace
 			if len(entries[i]) < maxDirEntryLen {
-				entries[i][version] = DirEntryValue{
+				entries[i] = append(entries[i], DirEntryValue{
+					version:    version,
 					DirEntries: newSubEntries,
-				}
+				})
 				return d, nil
 			} else {
 				newEntries := make(DirEntries, 0, len(entries))
 				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, DirEntry{
-					version: {
+					{
+						version:    version,
 						DirEntries: newSubEntries,
 					},
 				})
