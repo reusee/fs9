@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"math/rand"
+	"sort"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -71,5 +73,38 @@ func testFS(
 
 	// fstest
 	ce(fstest.TestFS(fs, allPaths...))
+
+	for _, path := range allPaths {
+		ce(fs.Remove(path))
+	}
+
+	var dirPaths []string
+	ce(iofs.WalkDir(fs, ".", func(path string, entry iofs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == "." {
+			return nil
+		}
+		if !entry.IsDir() {
+			return nil
+		}
+		dirPaths = append(dirPaths, path)
+		return nil
+	}))
+	sort.Slice(dirPaths, func(i, j int) bool {
+		return rand.Intn(2) == 0
+	})
+	var deleted []string
+loop_paths:
+	for _, path := range dirPaths {
+		for _, d := range deleted {
+			if strings.HasPrefix(path, d) {
+				continue loop_paths
+			}
+		}
+		ce(fs.Remove(path, OptAll(true)))
+		deleted = append(deleted, path)
+	}
 
 }

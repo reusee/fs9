@@ -9,4 +9,5 @@ var (
 	ErrOutOfBounds  = errors.New("out of bounds")
 	ErrTypeMismatch = errors.New("type mismatch")
 	ErrNameMismatch = errors.New("name mismatch")
+	ErrDirNotEmpty  = errors.New("dir not empty")
 )

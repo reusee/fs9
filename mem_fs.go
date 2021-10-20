@@ -116,3 +116,24 @@ func (m *MemFS) MakeDirAll(path string) error {
 	}
 	return nil
 }
+
+func (m *MemFS) Remove(path string, options ...RemoveOption) error {
+	if path == "" {
+		return nil
+	}
+	var spec removeSpec
+	for _, fn := range options {
+		fn(&spec)
+	}
+	return m.Apply(
+		strings.Split(path, "/"),
+		func(file *File) (*File, error) {
+			if file.IsDir && len(file.Entries) > 0 && !spec.All {
+				return nil, we.With(
+					e4.NewInfo("path: %s", path),
+				)(ErrDirNotEmpty)
+			}
+			return nil, nil
+		},
+	)
+}
