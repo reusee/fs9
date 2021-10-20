@@ -10,7 +10,9 @@ import (
 )
 
 func TestMemFS(t *testing.T) {
-	testFS(t, NewMemFS())
+	testFS(t, func() FS {
+		return NewMemFS()
+	})
 }
 
 func TestMemFSOperations(t *testing.T) {
