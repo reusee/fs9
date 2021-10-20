@@ -8,31 +8,45 @@ import (
 	"sync"
 )
 
-//TODO associate file by id instead of path
-
 type MemHandle struct {
 	sync.Mutex
 	FS          *MemFS
+	id          int64
 	Path        []string
 	Offset      int64
 	iterStarted bool
 	iter        Src
+	closed      bool
+	onClose     []func()
 }
 
 var _ fs.ReadDirFile = new(MemHandle)
 
 func (m *MemHandle) Close() error {
+	m.Lock()
+	defer m.Unlock()
+	if m.closed {
+		return nil
+	}
+	for _, fn := range m.onClose {
+		fn()
+	}
+	m.closed = true
 	return nil
 }
 
 func (m *MemHandle) Read(buf []byte) (n int, err error) {
 	m.Lock()
 	defer m.Unlock()
+	if m.closed {
+		return 0, ErrClosed
+	}
 	var eof bool
 	b := new(bytes.Buffer)
 	b.Grow(len(buf))
 	err = m.FS.Apply(
 		m.Path,
+		m.id,
 		Read(m.Offset, int64(len(buf)), b, &n, &eof),
 	)
 	if err != nil {
@@ -49,6 +63,9 @@ func (m *MemHandle) Read(buf []byte) (n int, err error) {
 func (m *MemHandle) Seek(offset int64, whence int) (int64, error) {
 	m.Lock()
 	defer m.Unlock()
+	if m.closed {
+		return 0, ErrClosed
+	}
 	switch whence {
 	case 0:
 		m.Offset = offset
@@ -57,6 +74,7 @@ func (m *MemHandle) Seek(offset int64, whence int) (int64, error) {
 	case 2:
 		if err := m.FS.Apply(
 			m.Path,
+			m.id,
 			func(file *File) (*File, error) {
 				m.Offset = file.Size + offset
 				return file, nil
@@ -71,8 +89,15 @@ func (m *MemHandle) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (m *MemHandle) Stat() (info fs.FileInfo, err error) {
+	m.Lock()
+	defer m.Unlock()
+	if m.closed {
+		err = ErrClosed
+		return
+	}
 	if err := m.FS.Apply(
 		m.Path,
+		m.id,
 		func(file *File) (*File, error) {
 			info = file.Info()
 			return file, nil
@@ -86,8 +111,12 @@ func (m *MemHandle) Stat() (info fs.FileInfo, err error) {
 func (m *MemHandle) Write(data []byte) (n int, err error) {
 	m.Lock()
 	defer m.Unlock()
+	if m.closed {
+		return 0, ErrClosed
+	}
 	err = m.FS.Apply(
 		m.Path,
+		m.id,
 		Write(m.Offset, bytes.NewReader(data), &n),
 	)
 	if err != nil {
@@ -100,9 +129,13 @@ func (m *MemHandle) Write(data []byte) (n int, err error) {
 func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 	m.Lock()
 	defer m.Unlock()
+	if m.closed {
+		return nil, ErrClosed
+	}
 	if !m.iterStarted {
 		err := m.FS.Apply(
 			m.Path,
+			m.id,
 			func(file *File) (*File, error) {
 				m.iter = file.Entries.IterFileInfos(nil)
 				m.iterStarted = true

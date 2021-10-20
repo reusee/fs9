@@ -10,4 +10,5 @@ var (
 	ErrTypeMismatch = errors.New("type mismatch")
 	ErrNameMismatch = errors.New("name mismatch")
 	ErrDirNotEmpty  = errors.New("dir not empty")
+	ErrClosed       = errors.New("closed")
 )

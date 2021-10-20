@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 )
 
 type File struct {
+	id      int64
 	IsDir   bool
 	Name    string
 	Entries DirEntries
@@ -27,6 +29,7 @@ func NewFile(name string, isDir bool) *File {
 		mode |= fs.ModeDir
 	}
 	return &File{
+		id:      rand.Int63(),
 		IsDir:   isDir,
 		Name:    name,
 		ModTime: time.Now(),

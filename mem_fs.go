@@ -10,15 +10,19 @@ import (
 
 type MemFS struct {
 	sync.RWMutex
-	version int64
-	Root    *File
+	version       int64
+	Root          *File
+	handleCounter map[string]int
+	detached      map[int64]*File
 }
 
 var _ FS = new(MemFS)
 
 func NewMemFS() *MemFS {
 	return &MemFS{
-		Root: NewFile("_root_", true),
+		Root:          NewFile("_root_", true),
+		handleCounter: make(map[string]int),
+		detached:      make(map[int64]*File),
 	}
 }
 
@@ -51,35 +55,81 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 		}, nil
 	}
 
+	var id int64
 	pathParts := strings.Split(path, "/")
-	err := m.Apply(pathParts, Ensure(
-		pathParts[len(pathParts)-1],
-		false,
-		spec.Create,
-	))
+	err := m.Apply(pathParts, 0, func(file *File) (*File, error) {
+		ret, err := Ensure(
+			pathParts[len(pathParts)-1],
+			false,
+			spec.Create,
+		)(file)
+		if err != nil {
+			return nil, err
+		}
+		id = ret.id
+		return ret, nil
+	})
 	if err != nil {
 		return nil, err
 	}
+	if id == 0 {
+		panic("impossible")
+	}
 
+	m.handleCounter[path]++
 	handle := &MemHandle{
 		FS:   m,
 		Path: pathParts,
+		id:   id,
+		onClose: []func(){
+			func() {
+				m.Lock()
+				defer m.Unlock()
+				m.handleCounter[path]--
+			},
+		},
 	}
 
 	return handle, nil
 }
 
-func (m *MemFS) Apply(path []string, op Operation) error {
+func (m *MemFS) Apply(path []string, id int64, op Operation) error {
 	m.Lock()
 	defer m.Unlock()
 	m.version++
-	newRoot, err := m.Root.Apply(m.version, path, op)
+
+	detached := false
+	newRoot, err := m.Root.Apply(m.version, path, func(file *File) (*File, error) {
+
+		if id > 0 && file.id != id {
+			// detached
+			detached = true
+			file, ok := m.detached[id]
+			if !ok {
+				panic("impossible")
+			}
+			newFile, err := op(file)
+			if err != nil {
+				return nil, err
+			}
+			if newFile != file {
+				m.detached[id] = newFile
+			}
+			return newFile, nil
+		}
+
+		return op(file)
+	})
 	if err != nil {
 		return err
 	}
-	if newRoot != m.Root {
-		m.Root = newRoot
+
+	if !detached {
+		if newRoot != m.Root {
+			m.Root = newRoot
+		}
 	}
+
 	return nil
 }
 
@@ -87,6 +137,7 @@ func (m *MemFS) MakeDir(path string) error {
 	parts := strings.Split(path, "/")
 	return m.Apply(
 		strings.Split(path, "/"),
+		0,
 		Ensure(
 			parts[len(parts)-1],
 			true,
@@ -105,6 +156,7 @@ func (m *MemFS) MakeDirAll(path string) error {
 		name := parts[i]
 		if err := m.Apply(
 			dir,
+			0,
 			Ensure(
 				name,
 				true,
@@ -127,11 +179,19 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 	}
 	return m.Apply(
 		strings.Split(path, "/"),
+		0,
 		func(file *File) (*File, error) {
 			if file.IsDir && len(file.Entries) > 0 && !spec.All {
 				return nil, we.With(
 					e4.NewInfo("path: %s", path),
 				)(ErrDirNotEmpty)
+			}
+			if m.handleCounter[path] > 0 {
+				// add to detached files
+				if _, ok := m.detached[file.id]; !ok {
+					m.detached[file.id] = file
+					//TODO delete entry
+				}
 			}
 			return nil, nil
 		},
