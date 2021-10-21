@@ -57,11 +57,11 @@ func (f *File) Apply(version int64, path []string, op Operation) (newFile *File,
 	}
 
 	if f == nil {
-		return nil, we(ErrInvalidPath)
+		return nil, we(ErrFileNotFound)
 	}
 
 	if !f.IsDir {
-		return nil, we(ErrInvalidPath)
+		return nil, we(ErrFileNotFound)
 	}
 
 	// descend

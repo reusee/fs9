@@ -93,7 +93,7 @@ func TestMemFSOperations(t *testing.T) {
 	eq(
 		len(fs.Root.Entries), 3,
 		err != nil, true,
-		is(err, ErrInvalidPath), true,
+		is(err, ErrFileNotFound), true,
 	)
 
 	var info os.FileInfo
