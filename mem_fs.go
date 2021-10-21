@@ -2,7 +2,6 @@ package fs9
 
 import (
 	"io/fs"
-	"strings"
 	"sync"
 
 	"github.com/reusee/e4"
@@ -36,12 +35,6 @@ func (m *MemFS) Open(path string) (fs.File, error) {
 
 func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 
-	if !fs.ValidPath(path) {
-		return nil, we.With(
-			e4.Info("path: %s", path),
-		)(ErrInvalidPath)
-	}
-
 	var spec openSpec
 	for _, opt := range opts {
 		opt(&spec)
@@ -56,8 +49,11 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 	}
 
 	var id int64
-	pathParts := strings.Split(path, "/")
-	err := m.Apply(pathParts, 0, func(file *File) (*File, error) {
+	pathParts, err := SplitPath(path)
+	if err != nil {
+		return nil, err
+	}
+	err = m.Apply(pathParts, 0, func(file *File) (*File, error) {
 		ret, err := Ensure(
 			pathParts[len(pathParts)-1],
 			false,
@@ -132,9 +128,12 @@ func (m *MemFS) Apply(path []string, id int64, op Operation) error {
 }
 
 func (m *MemFS) MakeDir(path string) error {
-	parts := strings.Split(path, "/")
+	parts, err := SplitPath(path)
+	if err != nil {
+		return err
+	}
 	return m.Apply(
-		strings.Split(path, "/"),
+		parts,
 		0,
 		Ensure(
 			parts[len(parts)-1],
@@ -148,7 +147,10 @@ func (m *MemFS) MakeDirAll(path string) error {
 	if path == "" {
 		return nil
 	}
-	parts := strings.Split(path, "/")
+	parts, err := SplitPath(path)
+	if err != nil {
+		return err
+	}
 	for i := 0; i < len(parts); i++ {
 		dir := parts[:i+1]
 		name := parts[i]
@@ -175,8 +177,12 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 	for _, fn := range options {
 		fn(&spec)
 	}
+	parts, err := SplitPath(path)
+	if err != nil {
+		return err
+	}
 	return m.Apply(
-		strings.Split(path, "/"),
+		parts,
 		0,
 		func(file *File) (*File, error) {
 			if file.IsDir && len(file.Entries) > 0 && !spec.All {
