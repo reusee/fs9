@@ -170,7 +170,7 @@ func MutatePath(path []string, fn Mutator) Mutator {
 			}
 
 			// found
-			sub, err := MutatePath(path[1:], fn)(ctx, &entries[idx])
+			sub, err := MutatePath(path, fn)(ctx, &entries[idx])
 			if err != nil {
 				return nil, we(err)
 			}
