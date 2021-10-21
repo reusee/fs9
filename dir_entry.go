@@ -55,7 +55,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 	//}()
 
 	we := we.With(
-		e4.NewInfo("path: %s", strings.Join(path, "/")),
+		e4.Info("path: %s", strings.Join(path, "/")),
 	)
 
 	if len(path) == 0 {
@@ -245,7 +245,7 @@ func (d DirEntries) Dump(w io.Writer, level int) {
 func (d DirEntries) wrapDump() e4.WrapFunc {
 	buf := new(strings.Builder)
 	d.Dump(buf, 0)
-	return e4.NewInfo("%s", buf.String())
+	return e4.Info("%s", buf.String())
 }
 
 func (d DirEntries) verifyStructure() error {
@@ -297,7 +297,7 @@ func (d DirEntries) verifyStructure() error {
 		if i != j {
 			return ce.With(
 				d.wrapDump(),
-				e4.NewInfo("order: %+v", idx),
+				e4.Info("order: %+v", idx),
 			)(fmt.Errorf("invalid order"))
 		}
 	}

@@ -38,7 +38,7 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 
 	if !fs.ValidPath(path) {
 		return nil, we.With(
-			e4.NewInfo("path: %s", path),
+			e4.Info("path: %s", path),
 		)(ErrInvalidPath)
 	}
 
@@ -181,7 +181,7 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 		func(file *File) (*File, error) {
 			if file.IsDir && len(file.Entries) > 0 && !spec.All {
 				return nil, we.With(
-					e4.NewInfo("path: %s", path),
+					e4.Info("path: %s", path),
 				)(ErrDirNotEmpty)
 			}
 			if m.openedIDs[file.id] > 0 {

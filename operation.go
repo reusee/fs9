@@ -48,7 +48,7 @@ func Write(
 	return func(file *File) (*File, error) {
 		if offset > file.Size {
 			return nil, we.With(
-				e4.NewInfo("file size is %d, cannot write at %d", file.Size, offset),
+				e4.Info("file size is %d, cannot write at %d", file.Size, offset),
 			)(ErrOutOfBounds)
 		}
 		existed := file.Bytes[:offset]

@@ -103,7 +103,7 @@ func (f *File) Dump(w io.Writer, level int) {
 func (f *File) wrapDump() e4.WrapFunc {
 	buf := new(strings.Builder)
 	f.Dump(buf, 0)
-	return e4.NewInfo("%s", buf.String())
+	return e4.Info("%s", buf.String())
 }
 
 func (f *File) checkNewFile(newFile *File) error {

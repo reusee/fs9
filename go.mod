@@ -3,7 +3,7 @@ module github.com/reusee/fs9
 go 1.17
 
 require (
-	github.com/reusee/e4 v0.0.0-20210929160631-f5ffcca999a5
+	github.com/reusee/e4 v0.0.0-20211021052625-556a58dc4948
 	github.com/reusee/pp v0.0.0-20211003125005-d93fee3792f3
 	github.com/reusee/sb v0.0.0-20211013023636-c521ec7cac82
 )
