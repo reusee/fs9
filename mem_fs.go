@@ -82,6 +82,10 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 				m.Lock()
 				defer m.Unlock()
 				m.openedIDs[id]--
+				if m.openedIDs[id] == 0 {
+					// delete detached if any
+					delete(m.detached, id)
+				}
 			},
 		},
 	}
@@ -194,7 +198,6 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 				// add to detached files
 				if _, ok := m.detached[file.id]; !ok {
 					m.detached[file.id] = file
-					//TODO delete entry
 				}
 			}
 			return nil, nil

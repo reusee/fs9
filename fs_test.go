@@ -205,6 +205,14 @@ func testFS(
 			bytes.Equal(content, []byte("FOO")), true,
 		)
 
+		// close all
+		ce(handle1.Close())
+		ce(handle2.Close())
+		_, err = io.ReadAll(handle2)
+		eq(
+			is(err, ErrClosed), true,
+		)
+
 	})
 
 }
