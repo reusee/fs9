@@ -98,7 +98,8 @@ func (m *MemFS) Apply(path []string, ctx OperationCtx, op Operation) error {
 	defer m.Unlock()
 	m.version++
 
-	newRoot, err := m.Root.Apply(m.version, path, func(file *File) (*File, error) {
+	ctx.Version = m.version
+	newRoot, err := m.Root.Apply(path, ctx, func(file *File) (*File, error) {
 
 		if ctx.FileID > 0 && (file == nil || file.id != ctx.FileID) {
 			// detached

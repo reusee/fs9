@@ -37,7 +37,7 @@ func NewFile(name string, isDir bool) *File {
 	}
 }
 
-func (f *File) Apply(version int64, path []string, op Operation) (newFile *File, err error) {
+func (f *File) Apply(path []string, ctx OperationCtx, op Operation) (newFile *File, err error) {
 	//ce(f.verifyStructure())
 	//defer func() {
 	//	if newFile != nil {
@@ -65,7 +65,7 @@ func (f *File) Apply(version int64, path []string, op Operation) (newFile *File,
 	}
 
 	// descend
-	newEntries, err := f.Entries.Apply(version, path, op)
+	newEntries, err := f.Entries.Apply(path, ctx, op)
 	if err != nil {
 		return nil, err
 	}

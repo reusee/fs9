@@ -46,7 +46,7 @@ func (d DirEntries) MinName() string {
 	panic("impossible")
 }
 
-func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntries *DirEntries, err error) {
+func (d *DirEntries) Apply(path []string, ctx OperationCtx, op Operation) (newEntries *DirEntries, err error) {
 	//ce(d.verifyStructure())
 	//defer func() {
 	//	if newEntries != nil {
@@ -89,7 +89,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 
 	if i == len(entries) {
 		// not found
-		file, err := (*File)(nil).Apply(version, path[1:], op)
+		file, err := (*File)(nil).Apply(path[1:], ctx, op)
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +99,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 			copy(newEntries, entries)
 			newEntries = append(newEntries, DirEntry{
 				{
-					version: version,
+					version: ctx.Version,
 					File:    file,
 				},
 			})
@@ -113,7 +113,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 	case *File:
 		if item.Name != name {
 			// not found
-			file, err := (*File)(nil).Apply(version, path[1:], op)
+			file, err := (*File)(nil).Apply(path[1:], ctx, op)
 			if err != nil {
 				return nil, err
 			}
@@ -123,7 +123,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, DirEntry{
 					{
-						version: version,
+						version: ctx.Version,
 						File:    file,
 					},
 				})
@@ -134,7 +134,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 
 		} else {
 			// found
-			newFile, err := item.Apply(version, path[1:], op)
+			newFile, err := item.Apply(path[1:], ctx, op)
 			if err != nil {
 				return nil, err
 			}
@@ -151,7 +151,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 				// replace
 				if len(entries[i]) < maxDirEntryLen {
 					entries[i] = append(entries[i], DirEntryValue{
-						version: version,
+						version: ctx.Version,
 						File:    newFile,
 					})
 					return d, nil
@@ -160,7 +160,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 					newEntries = append(newEntries, entries[:i]...)
 					newEntries = append(newEntries, DirEntry{
 						{
-							version: version,
+							version: ctx.Version,
 							File:    newFile,
 						},
 					})
@@ -174,7 +174,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 	case *DirEntries:
 		if item.MinName() > name {
 			// not found
-			file, err := (*File)(nil).Apply(version, path[1:], op)
+			file, err := (*File)(nil).Apply(path[1:], ctx, op)
 			if err != nil {
 				return nil, err
 			}
@@ -184,7 +184,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, DirEntry{
 					{
-						version: version,
+						version: ctx.Version,
 						File:    file,
 					},
 				})
@@ -194,7 +194,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 			return d, nil
 		}
 
-		newSubEntries, err := item.Apply(version, path, op)
+		newSubEntries, err := item.Apply(path, ctx, op)
 		if err != nil {
 			return nil, err
 		}
@@ -208,7 +208,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 			// replace
 			if len(entries[i]) < maxDirEntryLen {
 				entries[i] = append(entries[i], DirEntryValue{
-					version:    version,
+					version:    ctx.Version,
 					DirEntries: newSubEntries,
 				})
 				return d, nil
@@ -217,7 +217,7 @@ func (d *DirEntries) Apply(version int64, path []string, op Operation) (newEntri
 				newEntries = append(newEntries, entries[:i]...)
 				newEntries = append(newEntries, DirEntry{
 					{
-						version:    version,
+						version:    ctx.Version,
 						DirEntries: newSubEntries,
 					},
 				})

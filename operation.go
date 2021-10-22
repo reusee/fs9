@@ -8,7 +8,8 @@ import (
 )
 
 type OperationCtx struct {
-	FileID int64
+	Version int64
+	FileID  int64
 }
 
 type Operation func(
