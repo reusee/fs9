@@ -46,7 +46,9 @@ func (m *MemHandle) Read(buf []byte) (n int, err error) {
 	b.Grow(len(buf))
 	err = m.FS.Apply(
 		m.Path,
-		m.id,
+		OperationCtx{
+			FileID: m.id,
+		},
 		Read(m.Offset, int64(len(buf)), b, &n, &eof),
 	)
 	if err != nil {
@@ -74,7 +76,9 @@ func (m *MemHandle) Seek(offset int64, whence int) (int64, error) {
 	case 2:
 		if err := m.FS.Apply(
 			m.Path,
-			m.id,
+			OperationCtx{
+				FileID: m.id,
+			},
 			func(file *File) (*File, error) {
 				m.Offset = file.Size + offset
 				return file, nil
@@ -97,7 +101,9 @@ func (m *MemHandle) Stat() (info fs.FileInfo, err error) {
 	}
 	if err := m.FS.Apply(
 		m.Path,
-		m.id,
+		OperationCtx{
+			FileID: m.id,
+		},
 		func(file *File) (*File, error) {
 			info = file.Info()
 			return file, nil
@@ -116,7 +122,9 @@ func (m *MemHandle) Write(data []byte) (n int, err error) {
 	}
 	err = m.FS.Apply(
 		m.Path,
-		m.id,
+		OperationCtx{
+			FileID: m.id,
+		},
 		Write(m.Offset, bytes.NewReader(data), &n),
 	)
 	if err != nil {
@@ -135,7 +143,9 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 	if !m.iterStarted {
 		err := m.FS.Apply(
 			m.Path,
-			m.id,
+			OperationCtx{
+				FileID: m.id,
+			},
 			func(file *File) (*File, error) {
 				m.iter = file.Entries.IterFileInfos(nil)
 				m.iterStarted = true

@@ -19,8 +19,9 @@ func TestMemFSOperations(t *testing.T) {
 	defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 
 	fs := NewMemFS()
+	ctx := OperationCtx{}
 
-	ce(fs.Apply([]string{"foo"}, 0, Ensure("foo", false, true)))
+	ce(fs.Apply([]string{"foo"}, ctx, Ensure("foo", false, true)))
 	file := fs.Root.Entries[0].Latest().(*File)
 	eq(
 		len(fs.Root.Entries), 1,
@@ -29,7 +30,7 @@ func TestMemFSOperations(t *testing.T) {
 		file.IsDir, false,
 	)
 
-	ce(fs.Apply([]string{"foo"}, 0, Ensure("foo", false, true)))
+	ce(fs.Apply([]string{"foo"}, ctx, Ensure("foo", false, true)))
 	file = fs.Root.Entries[0].Latest().(*File)
 	eq(
 		len(fs.Root.Entries), 1,
@@ -38,7 +39,7 @@ func TestMemFSOperations(t *testing.T) {
 		file.IsDir, false,
 	)
 
-	ce(fs.Apply([]string{"a"}, 0, Ensure("a", false, true)))
+	ce(fs.Apply([]string{"a"}, ctx, Ensure("a", false, true)))
 	file = fs.Root.Entries[0].Latest().(*File)
 	eq(
 		len(fs.Root.Entries), 2,
@@ -47,7 +48,7 @@ func TestMemFSOperations(t *testing.T) {
 		file.IsDir, false,
 	)
 
-	ce(fs.Apply([]string{"b"}, 0, Ensure("b", true, true)))
+	ce(fs.Apply([]string{"b"}, ctx, Ensure("b", true, true)))
 	file = fs.Root.Entries[1].Latest().(*File)
 	eq(
 		len(fs.Root.Entries), 3,
@@ -56,7 +57,7 @@ func TestMemFSOperations(t *testing.T) {
 		file.IsDir, true,
 	)
 
-	err := fs.Apply([]string{"a"}, 0, func(file *File) (*File, error) {
+	err := fs.Apply([]string{"a"}, ctx, func(file *File) (*File, error) {
 		return nil, fmt.Errorf("foo")
 	})
 	eq(
@@ -65,7 +66,7 @@ func TestMemFSOperations(t *testing.T) {
 		err.Error(), "foo",
 	)
 
-	err = fs.Apply([]string{"a"}, 0, func(file *File) (*File, error) {
+	err = fs.Apply([]string{"a"}, ctx, func(file *File) (*File, error) {
 		newFile := *file
 		newFile.Name = "foo"
 		return &newFile, nil
@@ -76,7 +77,7 @@ func TestMemFSOperations(t *testing.T) {
 		is(err, ErrNameMismatch), true,
 	)
 
-	err = fs.Apply([]string{"a"}, 0, func(file *File) (*File, error) {
+	err = fs.Apply([]string{"a"}, ctx, func(file *File) (*File, error) {
 		newFile := *file
 		newFile.IsDir = true
 		return &newFile, nil
@@ -87,7 +88,7 @@ func TestMemFSOperations(t *testing.T) {
 		is(err, ErrTypeMismatch), true,
 	)
 
-	err = fs.Apply([]string{"a", "foo"}, 0, func(file *File) (*File, error) {
+	err = fs.Apply([]string{"a", "foo"}, ctx, func(file *File) (*File, error) {
 		return file, nil
 	})
 	eq(
@@ -97,7 +98,7 @@ func TestMemFSOperations(t *testing.T) {
 	)
 
 	var info os.FileInfo
-	ce(fs.Apply([]string{"a"}, 0, func(file *File) (*File, error) {
+	ce(fs.Apply([]string{"a"}, ctx, func(file *File) (*File, error) {
 		info = file.Info()
 		return file, nil
 	}))

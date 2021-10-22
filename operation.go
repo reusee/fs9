@@ -7,6 +7,10 @@ import (
 	"github.com/reusee/e4"
 )
 
+type OperationCtx struct {
+	FileID int64
+}
+
 type Operation func(
 	file *File,
 ) (

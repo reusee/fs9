@@ -53,7 +53,7 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = m.Apply(pathParts, 0, func(file *File) (*File, error) {
+	err = m.Apply(pathParts, OperationCtx{}, func(file *File) (*File, error) {
 		ret, err := Ensure(
 			pathParts[len(pathParts)-1],
 			false,
@@ -93,16 +93,16 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 	return handle, nil
 }
 
-func (m *MemFS) Apply(path []string, id int64, op Operation) error {
+func (m *MemFS) Apply(path []string, ctx OperationCtx, op Operation) error {
 	m.Lock()
 	defer m.Unlock()
 	m.version++
 
 	newRoot, err := m.Root.Apply(m.version, path, func(file *File) (*File, error) {
 
-		if id > 0 && (file == nil || file.id != id) {
+		if ctx.FileID > 0 && (file == nil || file.id != ctx.FileID) {
 			// detached
-			detached, ok := m.detached[id]
+			detached, ok := m.detached[ctx.FileID]
 			if !ok {
 				panic("impossible")
 			}
@@ -111,7 +111,7 @@ func (m *MemFS) Apply(path []string, id int64, op Operation) error {
 				return nil, err
 			}
 			if newFile != detached {
-				m.detached[id] = newFile
+				m.detached[ctx.FileID] = newFile
 			}
 
 			// return origin file to avoid updating the tree
@@ -138,7 +138,7 @@ func (m *MemFS) MakeDir(path string) error {
 	}
 	return m.Apply(
 		parts,
-		0,
+		OperationCtx{},
 		Ensure(
 			parts[len(parts)-1],
 			true,
@@ -160,7 +160,7 @@ func (m *MemFS) MakeDirAll(path string) error {
 		name := parts[i]
 		if err := m.Apply(
 			dir,
-			0,
+			OperationCtx{},
 			Ensure(
 				name,
 				true,
@@ -187,7 +187,7 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 	}
 	return m.Apply(
 		parts,
-		0,
+		OperationCtx{},
 		func(file *File) (*File, error) {
 			if file.IsDir && len(file.Entries) > 0 && !spec.All {
 				return nil, we.With(
