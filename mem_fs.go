@@ -93,43 +93,67 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 	return handle, nil
 }
 
-func (m *MemFS) Apply(path []string, ctx OperationCtx, op Operation) error {
+type ApplySpec struct {
+	Path []string
+	Ctx  OperationCtx
+	Op   Operation
+}
+
+func (m *MemFS) ApplyAll(specs ...ApplySpec) error {
+	if len(specs) == 0 {
+		return nil
+	}
+
 	m.Lock()
 	defer m.Unlock()
 	m.version++
+	root := m.Root
 
-	ctx.Version = m.version
-	newRoot, err := m.Root.Apply(path, ctx, func(file *File) (*File, error) {
+	for _, spec := range specs {
+		spec.Ctx.Version = m.version
+		var err error
+		root, err = root.Apply(spec.Path, spec.Ctx, func(file *File) (*File, error) {
 
-		if ctx.FileID > 0 && (file == nil || file.id != ctx.FileID) {
-			// detached
-			detached, ok := m.detached[ctx.FileID]
-			if !ok {
-				panic("impossible")
-			}
-			newFile, err := op(detached)
-			if err != nil {
-				return nil, err
-			}
-			if newFile != detached {
-				m.detached[ctx.FileID] = newFile
+			if spec.Ctx.FileID > 0 && (file == nil || file.id != spec.Ctx.FileID) {
+				// detached
+				detached, ok := m.detached[spec.Ctx.FileID]
+				if !ok {
+					panic("impossible")
+				}
+				newFile, err := spec.Op(detached)
+				if err != nil {
+					return nil, err
+				}
+				if newFile != detached {
+					m.detached[spec.Ctx.FileID] = newFile
+				}
+
+				// return origin file to avoid updating the tree
+				return file, nil
 			}
 
-			// return origin file to avoid updating the tree
-			return file, nil
+			return spec.Op(file)
+		})
+		if err != nil {
+			return err
 		}
-
-		return op(file)
-	})
-	if err != nil {
-		return err
 	}
 
-	if newRoot != m.Root {
-		m.Root = newRoot
+	if root != m.Root {
+		m.Root = root
 	}
 
 	return nil
+}
+
+func (m *MemFS) Apply(path []string, ctx OperationCtx, op Operation) error {
+	return m.ApplyAll(
+		ApplySpec{
+			Path: path,
+			Ctx:  ctx,
+			Op:   op,
+		},
+	)
 }
 
 func (m *MemFS) MakeDir(path string) error {
