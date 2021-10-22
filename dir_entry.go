@@ -17,6 +17,7 @@ type DirEntryValue struct {
 	version    int64
 	File       *File
 	DirEntries *DirEntries
+	Redirect   *Redirect
 }
 
 const maxDirEntryLen = 4
@@ -27,6 +28,8 @@ func (d DirEntry) Latest() any {
 		return value.File
 	} else if value.DirEntries != nil {
 		return value.DirEntries
+	} else if value.Redirect != nil {
+		return value.Redirect
 	}
 	panic("impossible")
 }
@@ -42,6 +45,8 @@ func (d DirEntries) MinName() string {
 		return item.Name
 	case *DirEntries:
 		return item.MinName()
+	case *Redirect:
+		return item.Name
 	}
 	panic("impossible")
 }
@@ -77,6 +82,8 @@ func (d *DirEntries) Apply(path []string, ctx OperationCtx, op Operation) (newEn
 			return item.Name >= name
 		case *DirEntries:
 			return item.MinName() >= name
+		case *Redirect:
+			return item.Name >= name
 		}
 		panic("impossible")
 	})
@@ -227,6 +234,9 @@ func (d *DirEntries) Apply(path []string, ctx OperationCtx, op Operation) (newEn
 		}
 		return d, nil
 
+	case *Redirect:
+		//TODO
+
 	}
 
 	panic("impossible")
@@ -281,6 +291,8 @@ func (d DirEntries) verifyStructure() error {
 				return a.Name < b.Name
 			case *DirEntries:
 				return a.Name < b.MinName()
+			case *Redirect:
+				return a.Name < b.Name
 			}
 			panic("impossible")
 		case *DirEntries:
@@ -289,7 +301,19 @@ func (d DirEntries) verifyStructure() error {
 				return a.MinName() < b.Name
 			case *DirEntries:
 				return a.MinName() < b.MinName()
+			case *Redirect:
+				return a.MinName() < b.Name
 			}
+		case *Redirect:
+			switch b := b.Latest().(type) {
+			case *File:
+				return a.Name < b.Name
+			case *DirEntries:
+				return a.Name < b.MinName()
+			case *Redirect:
+				return a.Name < b.Name
+			}
+			panic("impossible")
 		}
 		panic("impossible")
 	})
