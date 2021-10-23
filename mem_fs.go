@@ -86,6 +86,8 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 				if m.openedIDs[id] == 0 {
 					// delete detached if any
 					delete(m.detached, id)
+					// clear
+					delete(m.openedIDs, id)
 				}
 			},
 		},
