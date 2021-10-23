@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/reusee/e4"
+	"github.com/reusee/pp"
 )
 
 type MemFS struct {
@@ -111,6 +112,23 @@ func (m *MemFS) ApplyAll(specs ...ApplySpec) error {
 
 	for _, spec := range specs {
 		spec.Ctx.Version = m.version
+
+		// detached
+		if spec.Ctx.FileID > 0 && m.detached[spec.Ctx.FileID] != nil {
+			detached, ok := m.detached[spec.Ctx.FileID]
+			if !ok {
+				panic("impossible")
+			}
+			newFile, err := spec.Op(detached)
+			if err != nil {
+				return err
+			}
+			if newFile != detached {
+				m.detached[spec.Ctx.FileID] = newFile
+			}
+			continue
+		}
+
 		var err error
 		root, err = root.Apply(spec.Path, spec.Ctx, func(file *File) (*File, error) {
 
@@ -219,11 +237,21 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 					e4.Info("path: %s", path),
 				)(ErrDirNotEmpty)
 			}
-			if m.openedIDs[file.id] > 0 {
-				// add to detached files
-				if _, ok := m.detached[file.id]; !ok {
-					m.detached[file.id] = file
-				}
+			err := pp.Copy(
+				file.IterAllFiles(nil),
+				pp.Tap(func(v any) error {
+					file := v.(*File)
+					if m.openedIDs[file.id] > 0 {
+						// add to detached files
+						if _, ok := m.detached[file.id]; !ok {
+							m.detached[file.id] = file
+						}
+					}
+					return nil
+				}),
+			)
+			if err != nil {
+				return nil, err
 			}
 			return nil, nil
 		},

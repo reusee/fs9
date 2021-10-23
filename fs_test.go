@@ -215,4 +215,39 @@ func testFS(
 
 	})
 
+	t.Run("test parent delete", func(t *testing.T) {
+		fs := newFS()
+
+		ce(fs.MakeDirAll("foo/bar/baz"))
+
+		h1, err := fs.OpenHandle("foo/bar/baz/qux", OptCreate(true))
+		ce(err)
+		defer h1.Close()
+
+		h2, err := fs.OpenHandle("foo/bar/qux", OptCreate(true))
+		ce(err)
+		defer h2.Close()
+
+		h3, err := fs.OpenHandle("foo/qux", OptCreate(true))
+		ce(err)
+		defer h3.Close()
+
+		ce(fs.Remove("foo", OptAll(true)))
+
+		_, err = h1.Write([]byte("foo"))
+		ce(err)
+		_, err = h2.Write([]byte("foo"))
+		ce(err)
+		_, err = h3.Write([]byte("foo"))
+		ce(err)
+
+		_, err = h1.Seek(0, 0)
+		content, err := io.ReadAll(h1)
+		ce(err)
+		eq(
+			bytes.Equal(content, []byte("foo")), true,
+		)
+
+	})
+
 }
