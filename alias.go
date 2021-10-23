@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/reusee/dscope"
 	"github.com/reusee/e4"
 	"github.com/reusee/pp"
 )
@@ -17,7 +18,8 @@ var (
 )
 
 type (
-	any  = interface{}
-	Src  = pp.Src
-	Sink = pp.Sink
+	any   = interface{}
+	Src   = pp.Src
+	Sink  = pp.Sink
+	Scope = dscope.Scope
 )
