@@ -11,7 +11,7 @@ import (
 type MemHandle struct {
 	sync.Mutex
 	FS          *MemFS
-	id          int64
+	id          FileID
 	Path        []string
 	Offset      int64
 	iterStarted bool
@@ -46,8 +46,8 @@ func (m *MemHandle) Read(buf []byte) (n int, err error) {
 	b.Grow(len(buf))
 	err = m.FS.Apply(
 		m.Path,
-		OperationCtx{
-			FileID: m.id,
+		[]any{
+			&m.id,
 		},
 		Read(m.Offset, int64(len(buf)), b, &n, &eof),
 	)
@@ -76,10 +76,11 @@ func (m *MemHandle) Seek(offset int64, whence int) (int64, error) {
 	case 2:
 		if err := m.FS.Apply(
 			m.Path,
-			OperationCtx{
-				FileID: m.id,
+			[]any{
+				&m.id,
 			},
-			func(file *File) (*File, error) {
+			func(node Node) (Node, error) {
+				file := node.(*File)
 				m.Offset = file.Size + offset
 				return file, nil
 			},
@@ -101,10 +102,11 @@ func (m *MemHandle) Stat() (info fs.FileInfo, err error) {
 	}
 	if err := m.FS.Apply(
 		m.Path,
-		OperationCtx{
-			FileID: m.id,
+		[]any{
+			&m.id,
 		},
-		func(file *File) (*File, error) {
+		func(node Node) (Node, error) {
+			file := node.(*File)
 			info = file.Info()
 			return file, nil
 		},
@@ -122,8 +124,8 @@ func (m *MemHandle) Write(data []byte) (n int, err error) {
 	}
 	err = m.FS.Apply(
 		m.Path,
-		OperationCtx{
-			FileID: m.id,
+		[]any{
+			&m.id,
 		},
 		Write(m.Offset, bytes.NewReader(data), &n),
 	)
@@ -143,11 +145,12 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 	if !m.iterStarted {
 		err := m.FS.Apply(
 			m.Path,
-			OperationCtx{
-				FileID: m.id,
+			[]any{
+				&m.id,
 			},
-			func(file *File) (*File, error) {
-				m.iter = file.Entries.IterFileInfos(nil)
+			func(node Node) (Node, error) {
+				file := node.(*File)
+				m.iter = file.Entries.Range(nil)
 				m.iterStarted = true
 				return file, nil
 			},
@@ -171,6 +174,6 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 			}
 			return
 		}
-		ret = append(ret, v.(fs.DirEntry))
+		ret = append(ret, v.(*File).Info())
 	}
 }

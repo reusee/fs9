@@ -1,7 +1,8 @@
 package fs9
 
 import (
-	"reflect"
+	"io"
+	"os"
 	"sort"
 )
 
@@ -15,6 +16,8 @@ type Node interface {
 		retNode Node,
 		err error,
 	)
+	Dump(w io.Writer, level int)
+	Walk(cont Src) Src
 }
 
 type NodeSet struct {
@@ -58,7 +61,10 @@ func (n *NodeSet) Mutate(
 		return nil, we(ErrInvalidPath)
 	}
 
-	nodes := n.Nodes
+	var nodes []Node
+	if n != nil {
+		nodes = n.Nodes
+	}
 
 	// search
 	i := sort.Search(len(nodes), func(i int) bool {
@@ -68,8 +74,10 @@ func (n *NodeSet) Mutate(
 
 	if i == len(nodes) {
 		// not found
-		node := reflect.New(reflect.TypeOf(fn).In(0)).Elem().Interface().(Node)
-		newNode, err := node.Mutate(ctx, path[1:], fn)
+		if len(path) > 1 {
+			return nil, we(ErrNodeNotFound)
+		}
+		newNode, err := fn(nil)
 		if err != nil {
 			return nil, we(err)
 		}
@@ -87,8 +95,10 @@ func (n *NodeSet) Mutate(
 	minName, maxName := nodes[i].NameRange()
 	if name < minName {
 		// not found
-		node := reflect.New(reflect.TypeOf(fn).In(0)).Elem().Interface().(Node)
-		newNode, err := node.Mutate(ctx, path[1:], fn)
+		if len(path) > 1 {
+			return nil, we(ErrNodeNotFound)
+		}
+		newNode, err := fn(nil)
 		if err != nil {
 			return nil, we(err)
 		}
@@ -142,4 +152,44 @@ func (n *NodeSet) Mutate(
 	}
 
 	panic("impossible")
+}
+
+func (n NodeSet) Dump(w io.Writer, level int) {
+	if w == nil {
+		w = os.Stdout
+	}
+	for _, node := range n.Nodes {
+		node.Dump(w, level)
+	}
+}
+
+func (n NodeSet) Walk(cont Src) Src {
+	i := 0
+	var src Src
+	src = func() (any, Src, error) {
+		if i == len(n.Nodes) {
+			return nil, cont, nil
+		}
+		i++
+		return n.Nodes[i-1].Walk(src)()
+	}
+	return src
+}
+
+func (n NodeSet) Range(cont Src) Src {
+	i := 0
+	var src Src
+	src = func() (any, Src, error) {
+		if i == len(n.Nodes) {
+			return nil, cont, nil
+		}
+		i++
+		switch node := n.Nodes[i-1].(type) {
+		case *NodeSet:
+			return node.Walk(src)()
+		default:
+			return node, src, nil
+		}
+	}
+	return src
 }

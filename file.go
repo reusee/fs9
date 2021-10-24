@@ -13,15 +13,17 @@ import (
 )
 
 type File struct {
-	id      int64
+	id      FileID
 	IsDir   bool
 	Name    string
-	Entries DirEntries
+	Entries *NodeSet
 	Size    int64
 	Mode    os.FileMode
 	ModTime time.Time
 	Bytes   []byte
 }
+
+type FileID int64
 
 func NewFile(name string, isDir bool) *File {
 	var mode fs.FileMode
@@ -29,7 +31,7 @@ func NewFile(name string, isDir bool) *File {
 		mode |= fs.ModeDir
 	}
 	return &File{
-		id:      rand.Int63(),
+		id:      FileID(rand.Int63()),
 		IsDir:   isDir,
 		Name:    name,
 		ModTime: time.Now(),
@@ -37,23 +39,25 @@ func NewFile(name string, isDir bool) *File {
 	}
 }
 
-func (f *File) Apply(path []string, ctx OperationCtx, op Operation) (newFile *File, err error) {
-	//ce(f.verifyStructure())
-	//defer func() {
-	//	if newFile != nil {
-	//		ce(newFile.verifyStructure())
-	//	}
-	//}()
+var _ Node = new(File)
+
+func (f *File) NameRange() (string, string) {
+	return f.Name, f.Name
+}
+
+func (f *File) Mutate(ctx Scope, path []string, fn func(Node) (Node, error)) (Node, error) {
 
 	if len(path) == 0 {
-		newFile, err := op(f)
+		newNode, err := fn(f)
 		if err != nil {
-			return nil, err
-		}
-		if err := f.checkNewFile(newFile); err != nil {
 			return nil, we(err)
 		}
-		return newFile, nil
+		if newNode != nil {
+			if err := f.checkNewFile(newNode.(*File)); err != nil {
+				return nil, we(err)
+			}
+		}
+		return newNode, nil
 	}
 
 	if f == nil {
@@ -65,25 +69,34 @@ func (f *File) Apply(path []string, ctx OperationCtx, op Operation) (newFile *Fi
 	}
 
 	// descend
-	newEntries, err := f.Entries.Apply(path, ctx, op)
+	newNodeSet, err := f.Entries.Mutate(ctx, path, fn)
 	if err != nil {
-		return nil, err
+		return nil, we(err)
 	}
-	if newEntries == nil {
+	if newNodeSet == nil {
 		// delete
 		newFile := *f
 		newFile.Entries = nil
 		newFile.ModTime = time.Now()
 		return &newFile, nil
-	} else if newEntries != &f.Entries {
+	} else if newNodeSet.(*NodeSet) != f.Entries {
 		// replace
 		newFile := *f
-		newFile.Entries = *newEntries
+		newFile.Entries = newNodeSet.(*NodeSet)
 		newFile.ModTime = time.Now()
 		return &newFile, nil
 	}
 
 	return f, nil
+}
+
+func (f *File) Walk(cont Src) Src {
+	return func() (any, Src, error) {
+		if f.Entries == nil {
+			return f, cont, nil
+		}
+		return f, f.Entries.Walk(cont), nil
+	}
 }
 
 func (f *File) Info() FileInfo {
@@ -97,7 +110,9 @@ func (f *File) Dump(w io.Writer, level int) {
 		w = os.Stdout
 	}
 	fmt.Fprintf(w, "%s%s\n", strings.Repeat(".", level), f.Name)
-	f.Entries.Dump(w, level+1)
+	if f.Entries != nil {
+		f.Entries.Dump(w, level+1)
+	}
 }
 
 func (f *File) wrapDump() e4.WrapFunc {
@@ -118,11 +133,4 @@ func (f *File) checkNewFile(newFile *File) error {
 		return ErrNameMismatch
 	}
 	return nil
-}
-
-func (f *File) verifyStructure() error {
-	if f == nil {
-		return nil
-	}
-	return f.Entries.verifyStructure()
 }

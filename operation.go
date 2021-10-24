@@ -7,15 +7,10 @@ import (
 	"github.com/reusee/e4"
 )
 
-type OperationCtx struct {
-	Version int64
-	FileID  int64
-}
-
 type Operation func(
-	file *File,
+	node Node,
 ) (
-	ret *File,
+	ret Node,
 	err error,
 )
 
@@ -25,9 +20,10 @@ func Ensure(
 	create bool,
 ) Operation {
 	return func(
-		file *File,
-	) (*File, error) {
-		if file != nil {
+		node Node,
+	) (Node, error) {
+		if node != nil {
+			file := node.(*File)
 			if file.Name != name {
 				panic("impossible")
 			}
@@ -50,7 +46,8 @@ func Write(
 	from io.Reader,
 	bytesWritten *int,
 ) Operation {
-	return func(file *File) (*File, error) {
+	return func(node Node) (Node, error) {
+		file := node.(*File)
 		if offset > file.Size {
 			return nil, we.With(
 				e4.Info("file size is %d, cannot write at %d", file.Size, offset),
@@ -80,7 +77,8 @@ func Read(
 	bytesRead *int,
 	eof *bool,
 ) Operation {
-	return func(file *File) (*File, error) {
+	return func(node Node) (Node, error) {
+		file := node.(*File)
 		end := offset + length
 		if end > file.Size {
 			end = file.Size

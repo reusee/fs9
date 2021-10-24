@@ -5,45 +5,49 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/reusee/dscope"
 	"github.com/reusee/e4"
 )
 
 func TestFilePersistence(t *testing.T) {
 	defer he(nil, e4.TestingFatal(t))
 
-	ctx := OperationCtx{
-		Version: 1,
-	}
+	var version Version
+	ctx := dscope.New(&version)
 	root := NewFile("root", true)
 	var files []*File
 	for i := 0; i < 1024; i++ {
-		root, err := root.Apply([]string{"foo"}, ctx, Ensure("foo", true, true))
+		root, err := root.Mutate(ctx, []string{"foo"}, Ensure("foo", true, true))
 		ce(err)
-		ctx.Version++
-		root, err = root.Apply([]string{"foo", "bar"}, ctx, Ensure("bar", true, true))
+		version++
+		ctx = ctx.Fork(&version)
+		root, err = root.Mutate(ctx, []string{"foo", "bar"}, Ensure("bar", true, true))
 		ce(err)
-		ctx.Version++
-		file, err := root.Apply(
-			[]string{"foo", "bar", "baz"},
+		version++
+		ctx = ctx.Fork(&version)
+		file, err := root.Mutate(
 			ctx,
+			[]string{"foo", "bar", "baz"},
 			Ensure("baz", false, true))
 		ce(err)
-		ctx.Version++
-		file, err = file.Apply(
-			[]string{"foo", "bar", "baz"},
+		version++
+		ctx = ctx.Fork(&version)
+		file, err = file.Mutate(
 			ctx,
+			[]string{"foo", "bar", "baz"},
 			Write(0, strings.NewReader(fmt.Sprintf("%d", i)), nil))
 		ce(err)
-		ctx.Version++
-		files = append(files, file)
+		version++
+		ctx = ctx.Fork(&version)
+		files = append(files, file.(*File))
 		root = file
 	}
 
 	for i, file := range files {
 		buf := new(strings.Builder)
-		_, err := file.Apply(
-			[]string{"foo", "bar", "baz"},
+		_, err := file.Mutate(
 			ctx,
+			[]string{"foo", "bar", "baz"},
 			Read(0, 20, buf, nil, nil))
 		ce(err)
 		if buf.String() != fmt.Sprintf("%d", i) {

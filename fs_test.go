@@ -74,6 +74,10 @@ func testFS(
 
 		}
 
+		ce(iofs.WalkDir(fs, ".", func(path string, entry iofs.DirEntry, err error) error {
+			return err
+		}))
+
 		// fstest
 		ce(fstest.TestFS(fs, allPaths...))
 
@@ -84,7 +88,9 @@ func testFS(
 		var dirPaths []string
 		ce(iofs.WalkDir(fs, ".", func(path string, entry iofs.DirEntry, err error) error {
 			if err != nil {
-				return err
+				return we.With(
+					e4.Info("path %s", path),
+				)(err)
 			}
 			if path == "." {
 				return nil

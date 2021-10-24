@@ -4,25 +4,34 @@ import (
 	"io/fs"
 	"sync"
 
+	"github.com/reusee/dscope"
 	"github.com/reusee/e4"
 	"github.com/reusee/pp"
 )
 
 type MemFS struct {
 	sync.RWMutex
-	version   int64
+	ctx       Scope
+	version   Version
 	Root      *File
-	openedIDs map[int64]int
-	detached  map[int64]*File
+	openedIDs map[FileID]int
+	detached  map[FileID]*File
 }
+
+type Version int64
 
 var _ FS = new(MemFS)
 
 func NewMemFS() *MemFS {
 	return &MemFS{
+		ctx: dscope.New(
+			func() FileID {
+				return 0
+			},
+		),
 		Root:      NewFile("_root_", true),
-		openedIDs: make(map[int64]int),
-		detached:  make(map[int64]*File),
+		openedIDs: make(map[FileID]int),
+		detached:  make(map[FileID]*File),
 	}
 }
 
@@ -49,21 +58,21 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 		}, nil
 	}
 
-	var id int64
+	var id FileID
 	pathParts, err := SplitPath(path)
 	if err != nil {
 		return nil, err
 	}
-	err = m.Apply(pathParts, OperationCtx{}, func(file *File) (*File, error) {
+	err = m.Apply(pathParts, nil, func(node Node) (Node, error) {
 		ret, err := Ensure(
 			pathParts[len(pathParts)-1],
 			false,
 			spec.Create,
-		)(file)
+		)(node)
 		if err != nil {
 			return nil, err
 		}
-		id = ret.id
+		id = ret.(*File).id
 		return ret, nil
 	})
 	if err != nil {
@@ -98,7 +107,7 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 
 type ApplySpec struct {
 	Path []string
-	Ctx  OperationCtx
+	Defs []any
 	Op   Operation
 }
 
@@ -111,52 +120,58 @@ func (m *MemFS) ApplyAll(specs ...ApplySpec) error {
 	defer m.Unlock()
 	m.version++
 	root := m.Root
+	ctx := m.ctx.Fork(&m.version)
 
 	for _, spec := range specs {
-		spec.Ctx.Version = m.version
+		ctx := ctx.Fork(spec.Defs...)
 
 		// detached
-		if spec.Ctx.FileID > 0 && m.detached[spec.Ctx.FileID] != nil {
-			detached, ok := m.detached[spec.Ctx.FileID]
+		var fileID FileID
+		ctx.Assign(&fileID)
+		if fileID > 0 && m.detached[fileID] != nil {
+			detached, ok := m.detached[fileID]
 			if !ok {
 				panic("impossible")
 			}
-			newFile, err := spec.Op(detached)
+			newNode, err := spec.Op(detached)
 			if err != nil {
 				return err
 			}
+			newFile := newNode.(*File)
 			if newFile != detached {
-				m.detached[spec.Ctx.FileID] = newFile
+				m.detached[fileID] = newFile
 			}
 			continue
 		}
 
 		var err error
-		root, err = root.Apply(spec.Path, spec.Ctx, func(file *File) (*File, error) {
+		newNode, err := root.Mutate(ctx, spec.Path, func(node Node) (Node, error) {
 
-			if spec.Ctx.FileID > 0 && (file == nil || file.id != spec.Ctx.FileID) {
+			if fileID > 0 && (node == nil || node.(*File).id != fileID) {
 				// detached
-				detached, ok := m.detached[spec.Ctx.FileID]
+				detached, ok := m.detached[fileID]
 				if !ok {
 					panic("impossible")
 				}
-				newFile, err := spec.Op(detached)
+				newNode, err := spec.Op(detached)
 				if err != nil {
 					return nil, err
 				}
+				newFile := newNode.(*File)
 				if newFile != detached {
-					m.detached[spec.Ctx.FileID] = newFile
+					m.detached[fileID] = newFile
 				}
 
 				// return origin file to avoid updating the tree
-				return file, nil
+				return node, nil
 			}
 
-			return spec.Op(file)
+			return spec.Op(node)
 		})
 		if err != nil {
 			return err
 		}
+		root = newNode.(*File)
 	}
 
 	if root != m.Root {
@@ -166,11 +181,11 @@ func (m *MemFS) ApplyAll(specs ...ApplySpec) error {
 	return nil
 }
 
-func (m *MemFS) Apply(path []string, ctx OperationCtx, op Operation) error {
+func (m *MemFS) Apply(path []string, defs []any, op Operation) error {
 	return m.ApplyAll(
 		ApplySpec{
 			Path: path,
-			Ctx:  ctx,
+			Defs: defs,
 			Op:   op,
 		},
 	)
@@ -183,7 +198,7 @@ func (m *MemFS) MakeDir(path string) error {
 	}
 	return m.Apply(
 		parts,
-		OperationCtx{},
+		nil,
 		Ensure(
 			parts[len(parts)-1],
 			true,
@@ -205,7 +220,7 @@ func (m *MemFS) MakeDirAll(path string) error {
 		name := parts[i]
 		if err := m.Apply(
 			dir,
-			OperationCtx{},
+			nil,
 			Ensure(
 				name,
 				true,
@@ -232,15 +247,16 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 	}
 	return m.Apply(
 		parts,
-		OperationCtx{},
-		func(file *File) (*File, error) {
-			if file.IsDir && len(file.Entries) > 0 && !spec.All {
+		nil,
+		func(node Node) (Node, error) {
+			file := node.(*File)
+			if file.IsDir && len(file.Entries.Nodes) > 0 && !spec.All {
 				return nil, we.With(
 					e4.Info("path: %s", path),
 				)(ErrDirNotEmpty)
 			}
-			err := pp.Copy(
-				file.IterAllFiles(nil),
+			if err := pp.Copy(
+				file.Walk(nil),
 				pp.Tap(func(v any) error {
 					file := v.(*File)
 					if m.openedIDs[file.id] > 0 {
@@ -251,8 +267,7 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 					}
 					return nil
 				}),
-			)
-			if err != nil {
+			); err != nil {
 				return nil, err
 			}
 			return nil, nil
