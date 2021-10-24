@@ -6,7 +6,7 @@ import (
 )
 
 type Node interface {
-	NameRange() [2]string
+	NameRange() (string, string)
 	Mutate(
 		ctx Scope,
 		path []string,
@@ -28,18 +28,16 @@ func NewNodeSet(nodes []Node) *NodeSet {
 		Nodes: nodes,
 	}
 	if len(nodes) > 0 {
-		r1 := nodes[0].NameRange()
-		r2 := nodes[len(nodes)-1].NameRange()
-		set.MaxName = r1[0]
-		set.MaxName = r2[1]
+		set.MinName, _ = nodes[0].NameRange()
+		_, set.MaxName = nodes[len(nodes)-1].NameRange()
 	}
 	return set
 }
 
 var _ Node = new(NodeSet)
 
-func (n NodeSet) NameRange() (ret [2]string) {
-	return [2]string{n.MinName, n.MaxName}
+func (n NodeSet) NameRange() (string, string) {
+	return n.MinName, n.MaxName
 }
 
 func (n *NodeSet) Mutate(
@@ -64,7 +62,8 @@ func (n *NodeSet) Mutate(
 
 	// search
 	i := sort.Search(len(nodes), func(i int) bool {
-		return nodes[i].NameRange()[0] >= name
+		min, _ := nodes[i].NameRange()
+		return min >= name
 	})
 
 	if i == len(nodes) {
@@ -85,8 +84,8 @@ func (n *NodeSet) Mutate(
 		return n, nil
 	}
 
-	nameRange := nodes[i].NameRange()
-	if name < nameRange[0] {
+	minName, maxName := nodes[i].NameRange()
+	if name < minName {
 		// not found
 		node := reflect.New(reflect.TypeOf(fn).In(0)).Elem().Interface().(Node)
 		newNode, err := node.Mutate(ctx, path[1:], fn)
@@ -104,10 +103,10 @@ func (n *NodeSet) Mutate(
 		// not changed
 		return n, nil
 
-	} else if nameRange[0] <= name && name <= nameRange[1] {
+	} else if minName <= name && name <= maxName {
 		// in range
 		var newNode Node
-		if nameRange[0] == name && nameRange[1] == name {
+		if minName == name && maxName == name {
 			// exactly
 			newNode, err = nodes[i].Mutate(ctx, path[1:], fn)
 		} else {
@@ -127,7 +126,8 @@ func (n *NodeSet) Mutate(
 
 		} else if newNode != nodes[i] {
 			// replace
-			if newNode.NameRange() != nameRange {
+			newMinName, newMaxName := newNode.NameRange()
+			if newMinName != minName || newMaxName != maxName {
 				return nil, we(ErrInvalidName)
 			}
 			newNodes := make([]Node, 0, len(nodes))
