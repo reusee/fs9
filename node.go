@@ -17,22 +17,32 @@ type Node interface {
 	)
 }
 
-type Nodes []Node
-
-var _ Node = new(Nodes)
-
-func (n Nodes) NameRange() (ret [2]string) {
-	if len(n) == 0 {
-		return
-	}
-	r1 := n[0].NameRange()
-	r2 := n[len(n)-1].NameRange()
-	ret[0] = r1[0]
-	ret[1] = r2[1]
-	return
+type NodeSet struct {
+	Nodes   []Node
+	MinName string
+	MaxName string
 }
 
-func (n *Nodes) Mutate(
+func NewNodeSet(nodes []Node) *NodeSet {
+	set := &NodeSet{
+		Nodes: nodes,
+	}
+	if len(nodes) > 0 {
+		r1 := nodes[0].NameRange()
+		r2 := nodes[len(nodes)-1].NameRange()
+		set.MaxName = r1[0]
+		set.MaxName = r2[1]
+	}
+	return set
+}
+
+var _ Node = new(NodeSet)
+
+func (n NodeSet) NameRange() (ret [2]string) {
+	return [2]string{n.MinName, n.MaxName}
+}
+
+func (n *NodeSet) Mutate(
 	ctx Scope,
 	path []string,
 	fn func(Node) (Node, error),
@@ -50,7 +60,7 @@ func (n *Nodes) Mutate(
 		return nil, we(ErrInvalidPath)
 	}
 
-	nodes := *n
+	nodes := n.Nodes
 
 	// search
 	i := sort.Search(len(nodes), func(i int) bool {
@@ -66,10 +76,10 @@ func (n *Nodes) Mutate(
 		}
 		if newNode != nil {
 			// append
-			newNodes := make(Nodes, len(nodes), len(nodes)+1)
+			newNodes := make([]Node, len(nodes), len(nodes)+1)
 			copy(newNodes, nodes)
 			newNodes = append(newNodes, newNode)
-			return &newNodes, nil
+			return NewNodeSet(newNodes), nil
 		}
 		// not changed
 		return n, nil
@@ -85,11 +95,11 @@ func (n *Nodes) Mutate(
 		}
 		if newNode != nil {
 			// insert
-			newNodes := make(Nodes, 0, len(nodes)+1)
+			newNodes := make([]Node, 0, len(nodes)+1)
 			newNodes = append(newNodes, nodes[:i]...)
 			newNodes = append(newNodes, newNode)
 			newNodes = append(newNodes, nodes[i:]...)
-			return &newNodes, nil
+			return NewNodeSet(newNodes), nil
 		}
 		// not changed
 		return n, nil
@@ -110,21 +120,21 @@ func (n *Nodes) Mutate(
 
 		if newNode == nil {
 			// delete
-			newNodes := make(Nodes, 0, len(nodes)-1)
+			newNodes := make([]Node, 0, len(nodes)-1)
 			newNodes = append(newNodes, nodes[:i]...)
 			newNodes = append(newNodes, nodes[i+1:]...)
-			return &newNodes, nil
+			return NewNodeSet(newNodes), nil
 
 		} else if newNode != nodes[i] {
 			// replace
 			if newNode.NameRange() != nameRange {
 				return nil, we(ErrInvalidName)
 			}
-			newNodes := make(Nodes, 0, len(nodes))
+			newNodes := make([]Node, 0, len(nodes))
 			newNodes = append(newNodes, nodes[:i]...)
 			newNodes = append(newNodes, newNode)
 			newNodes = append(newNodes, nodes[i+1:]...)
-			return &newNodes, nil
+			return NewNodeSet(newNodes), nil
 		}
 
 		// not changed
