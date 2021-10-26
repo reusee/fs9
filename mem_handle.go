@@ -12,7 +12,7 @@ type MemHandle struct {
 	sync.Mutex
 	FS          *MemFS
 	id          FileID
-	Path        []string
+	Path        KeyPath
 	Offset      int64
 	iterStarted bool
 	iter        Src

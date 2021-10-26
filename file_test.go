@@ -17,24 +17,24 @@ func TestFilePersistence(t *testing.T) {
 	root := NewFile("root", true)
 	var files []*File
 	for i := 0; i < 1024; i++ {
-		root, err := root.Mutate(ctx, []string{"foo"}, Ensure("foo", true, true))
+		root, err := root.Mutate(ctx, KeyPath{"foo"}, Ensure("foo", true, true))
 		ce(err)
 		version++
 		ctx = ctx.Fork(&version)
-		root, err = root.Mutate(ctx, []string{"foo", "bar"}, Ensure("bar", true, true))
+		root, err = root.Mutate(ctx, KeyPath{"foo", "bar"}, Ensure("bar", true, true))
 		ce(err)
 		version++
 		ctx = ctx.Fork(&version)
 		file, err := root.Mutate(
 			ctx,
-			[]string{"foo", "bar", "baz"},
+			KeyPath{"foo", "bar", "baz"},
 			Ensure("baz", false, true))
 		ce(err)
 		version++
 		ctx = ctx.Fork(&version)
 		file, err = file.Mutate(
 			ctx,
-			[]string{"foo", "bar", "baz"},
+			KeyPath{"foo", "bar", "baz"},
 			Write(0, strings.NewReader(fmt.Sprintf("%d", i)), nil))
 		ce(err)
 		version++
@@ -47,7 +47,7 @@ func TestFilePersistence(t *testing.T) {
 		buf := new(strings.Builder)
 		_, err := file.Mutate(
 			ctx,
-			[]string{"foo", "bar", "baz"},
+			KeyPath{"foo", "bar", "baz"},
 			Read(0, 20, buf, nil, nil))
 		ce(err)
 		if buf.String() != fmt.Sprintf("%d", i) {

@@ -20,7 +20,7 @@ func TestMemFSOperations(t *testing.T) {
 
 	fs := NewMemFS()
 
-	ce(fs.Apply([]string{"foo"}, nil, Ensure("foo", false, true)))
+	ce(fs.Apply(KeyPath{"foo"}, nil, Ensure("foo", false, true)))
 	file := fs.Root.Entries.Nodes[0].(*File)
 	eq(
 		len(fs.Root.Entries.Nodes), 1,
@@ -29,7 +29,7 @@ func TestMemFSOperations(t *testing.T) {
 		file.IsDir, false,
 	)
 
-	ce(fs.Apply([]string{"foo"}, nil, Ensure("foo", false, true)))
+	ce(fs.Apply(KeyPath{"foo"}, nil, Ensure("foo", false, true)))
 	file = fs.Root.Entries.Nodes[0].(*File)
 	eq(
 		len(fs.Root.Entries.Nodes), 1,
@@ -38,7 +38,7 @@ func TestMemFSOperations(t *testing.T) {
 		file.IsDir, false,
 	)
 
-	ce(fs.Apply([]string{"a"}, nil, Ensure("a", false, true)))
+	ce(fs.Apply(KeyPath{"a"}, nil, Ensure("a", false, true)))
 	file = fs.Root.Entries.Nodes[0].(*File)
 	eq(
 		len(fs.Root.Entries.Nodes), 2,
@@ -47,7 +47,7 @@ func TestMemFSOperations(t *testing.T) {
 		file.IsDir, false,
 	)
 
-	ce(fs.Apply([]string{"b"}, nil, Ensure("b", true, true)))
+	ce(fs.Apply(KeyPath{"b"}, nil, Ensure("b", true, true)))
 	file = fs.Root.Entries.Nodes[1].(*File)
 	eq(
 		len(fs.Root.Entries.Nodes), 3,
@@ -57,7 +57,7 @@ func TestMemFSOperations(t *testing.T) {
 	)
 
 	fooErr := errors.New("foo")
-	err := fs.Apply([]string{"a"}, nil, func(node Node) (Node, error) {
+	err := fs.Apply(KeyPath{"a"}, nil, func(node Node) (Node, error) {
 		return nil, fooErr
 	})
 	eq(
@@ -66,7 +66,7 @@ func TestMemFSOperations(t *testing.T) {
 		is(err, fooErr), true,
 	)
 
-	err = fs.Apply([]string{"a"}, nil, func(node Node) (Node, error) {
+	err = fs.Apply(KeyPath{"a"}, nil, func(node Node) (Node, error) {
 		file := node.(*File)
 		newFile := *file
 		newFile.Name = "foo"
@@ -78,7 +78,7 @@ func TestMemFSOperations(t *testing.T) {
 		is(err, ErrNameMismatch), true,
 	)
 
-	err = fs.Apply([]string{"a"}, nil, func(node Node) (Node, error) {
+	err = fs.Apply(KeyPath{"a"}, nil, func(node Node) (Node, error) {
 		file := node.(*File)
 		newFile := *file
 		newFile.IsDir = true
@@ -90,7 +90,7 @@ func TestMemFSOperations(t *testing.T) {
 		is(err, ErrTypeMismatch), true,
 	)
 
-	err = fs.Apply([]string{"a", "foo"}, nil, func(node Node) (Node, error) {
+	err = fs.Apply(KeyPath{"a", "foo"}, nil, func(node Node) (Node, error) {
 		file := node.(*File)
 		return file, nil
 	})
@@ -101,7 +101,7 @@ func TestMemFSOperations(t *testing.T) {
 	)
 
 	var info os.FileInfo
-	ce(fs.Apply([]string{"a"}, nil, func(node Node) (Node, error) {
+	ce(fs.Apply(KeyPath{"a"}, nil, func(node Node) (Node, error) {
 		file := node.(*File)
 		info = file.Info()
 		return file, nil

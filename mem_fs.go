@@ -54,7 +54,7 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 		// root path
 		return &MemHandle{
 			FS:   m,
-			Path: []string{},
+			Path: KeyPath{},
 		}, nil
 	}
 
@@ -65,7 +65,7 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 	}
 	err = m.Apply(pathParts, nil, func(node Node) (Node, error) {
 		ret, err := Ensure(
-			pathParts[len(pathParts)-1],
+			pathParts[len(pathParts)-1].(string),
 			false,
 			spec.Create,
 		)(node)
@@ -106,7 +106,7 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 }
 
 type ApplySpec struct {
-	Path []string
+	Path KeyPath
 	Defs []any
 	Op   Operation
 }
@@ -181,7 +181,7 @@ func (m *MemFS) ApplyAll(specs ...ApplySpec) error {
 	return nil
 }
 
-func (m *MemFS) Apply(path []string, defs []any, op Operation) error {
+func (m *MemFS) Apply(path KeyPath, defs []any, op Operation) error {
 	return m.ApplyAll(
 		ApplySpec{
 			Path: path,
@@ -200,7 +200,7 @@ func (m *MemFS) MakeDir(path string) error {
 		parts,
 		nil,
 		Ensure(
-			parts[len(parts)-1],
+			parts[len(parts)-1].(string),
 			true,
 			true,
 		),
@@ -217,7 +217,7 @@ func (m *MemFS) MakeDirAll(path string) error {
 	}
 	for i := 0; i < len(parts); i++ {
 		dir := parts[:i+1]
-		name := parts[i]
+		name := parts[i].(string)
 		if err := m.Apply(
 			dir,
 			nil,

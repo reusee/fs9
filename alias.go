@@ -6,6 +6,7 @@ import (
 
 	"github.com/reusee/dscope"
 	"github.com/reusee/e4"
+	"github.com/reusee/it"
 	"github.com/reusee/pp"
 )
 
@@ -18,8 +19,12 @@ var (
 )
 
 type (
-	any   = interface{}
-	Src   = pp.Src
-	Sink  = pp.Sink
-	Scope = dscope.Scope
+	any     = interface{}
+	Src     = pp.Src
+	Sink    = pp.Sink
+	Scope   = dscope.Scope
+	Node    = it.Node
+	NodeSet = it.NodeSet
+	Key     = it.Key
+	KeyPath = it.KeyPath
 )

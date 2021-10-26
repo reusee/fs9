@@ -41,11 +41,11 @@ func NewFile(name string, isDir bool) *File {
 
 var _ Node = new(File)
 
-func (f *File) NameRange() (string, string) {
+func (f *File) KeyRange() (Key, Key) {
 	return f.Name, f.Name
 }
 
-func (f *File) Mutate(ctx Scope, path []string, fn func(Node) (Node, error)) (Node, error) {
+func (f *File) Mutate(ctx Scope, path KeyPath, fn func(Node) (Node, error)) (Node, error) {
 
 	if len(path) == 0 {
 		newNode, err := fn(f)
