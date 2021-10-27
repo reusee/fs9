@@ -11,11 +11,15 @@ import (
 
 type MemFS struct {
 	sync.RWMutex
-	ctx       Scope
-	version   Version
-	Root      *NamedFile
-	openedIDs map[FileID]int
-	detached  map[FileID]*NamedFile
+	ctx     Scope
+	version Version
+	Root    *NamedFile
+	handles map[FileID]*MemHandlesInfo
+}
+
+type MemHandlesInfo struct {
+	Count    int
+	Detached *NamedFile
 }
 
 type Version int64
@@ -29,9 +33,8 @@ func NewMemFS() *MemFS {
 				return 0
 			},
 		),
-		Root:      NewFile("_root_", true),
-		openedIDs: make(map[FileID]int),
-		detached:  make(map[FileID]*NamedFile),
+		Root:    NewFile("_root_", true),
+		handles: make(map[FileID]*MemHandlesInfo),
 	}
 }
 
@@ -82,7 +85,13 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 		panic("impossible")
 	}
 
-	m.openedIDs[id]++
+	info, ok := m.handles[id]
+	if !ok {
+		info = new(MemHandlesInfo)
+		m.handles[id] = info
+	}
+
+	info.Count++
 	handle := &MemHandle{
 		FS:   m,
 		Path: pathParts,
@@ -91,12 +100,9 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 			func() {
 				m.Lock()
 				defer m.Unlock()
-				m.openedIDs[id]--
-				if m.openedIDs[id] == 0 {
-					// delete detached if any
-					delete(m.detached, id)
-					// clear
-					delete(m.openedIDs, id)
+				info.Count--
+				if info.Count == 0 {
+					delete(m.handles, id)
 				}
 			},
 		},
@@ -125,45 +131,45 @@ func (m *MemFS) ApplyAll(specs ...ApplySpec) error {
 	for _, spec := range specs {
 		ctx := ctx.Fork(spec.Defs...)
 
-		// detached
 		var fileID FileID
 		ctx.Assign(&fileID)
-		if fileID > 0 && m.detached[fileID] != nil {
-			detached, ok := m.detached[fileID]
-			if !ok {
-				panic("impossible")
+
+		if fileID > 0 {
+			if info := m.handles[fileID]; info != nil {
+				// detached
+				if info.Detached != nil {
+					newNode, err := spec.Op(info.Detached)
+					if err != nil {
+						return err
+					}
+					newFile := newNode.(*NamedFile)
+					if newFile != info.Detached {
+						info.Detached = newFile
+					}
+					continue
+				}
 			}
-			newNode, err := spec.Op(detached)
-			if err != nil {
-				return err
-			}
-			newFile := newNode.(*NamedFile)
-			if newFile != detached {
-				m.detached[fileID] = newFile
-			}
-			continue
 		}
 
 		var err error
 		newNode, err := root.Mutate(ctx, spec.Path, func(node Node) (Node, error) {
 
 			if fileID > 0 && (node == nil || node.(*NamedFile).id != fileID) {
-				// detached
-				detached, ok := m.detached[fileID]
-				if !ok {
-					panic("impossible")
-				}
-				newNode, err := spec.Op(detached)
-				if err != nil {
-					return nil, err
-				}
-				newFile := newNode.(*NamedFile)
-				if newFile != detached {
-					m.detached[fileID] = newFile
-				}
+				if info := m.handles[fileID]; info != nil {
+					if info.Detached != nil {
+						newNode, err := spec.Op(info.Detached)
+						if err != nil {
+							return nil, err
+						}
+						newFile := newNode.(*NamedFile)
+						if newFile != info.Detached {
+							info.Detached = newFile
+						}
 
-				// return origin file to avoid updating the tree
-				return node, nil
+						// return origin file to avoid updating the tree
+						return node, nil
+					}
+				}
 			}
 
 			return spec.Op(node)
@@ -259,10 +265,10 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 				file.Walk(nil),
 				pp.Tap(func(v any) error {
 					file := v.(*NamedFile)
-					if m.openedIDs[file.id] > 0 {
+					if info := m.handles[file.id]; info != nil {
 						// add to detached files
-						if _, ok := m.detached[file.id]; !ok {
-							m.detached[file.id] = file
+						if info.Detached == nil {
+							info.Detached = file
 						}
 					}
 					return nil
