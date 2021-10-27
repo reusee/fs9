@@ -80,7 +80,7 @@ func (m *MemHandle) Seek(offset int64, whence int) (int64, error) {
 				&m.id,
 			},
 			func(node Node) (Node, error) {
-				file := node.(*File)
+				file := node.(*NamedFile)
 				m.Offset = file.Size + offset
 				return file, nil
 			},
@@ -106,7 +106,7 @@ func (m *MemHandle) Stat() (info fs.FileInfo, err error) {
 			&m.id,
 		},
 		func(node Node) (Node, error) {
-			file := node.(*File)
+			file := node.(*NamedFile)
 			info = file.Info()
 			return file, nil
 		},
@@ -149,7 +149,7 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 				&m.id,
 			},
 			func(node Node) (Node, error) {
-				file := node.(*File)
+				file := node.(*NamedFile)
 				m.iter = file.Entries.Range(nil)
 				m.iterStarted = true
 				return file, nil
@@ -174,6 +174,6 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 			}
 			return
 		}
-		ret = append(ret, v.(*File).Info())
+		ret = append(ret, v.(*NamedFile).Info())
 	}
 }

@@ -6,7 +6,7 @@ import (
 )
 
 type FileInfo struct {
-	*File
+	*NamedFile
 }
 
 func (f FileInfo) Info() (fs.FileInfo, error) {
@@ -18,27 +18,27 @@ var _ fs.DirEntry = FileInfo{}
 var _ fs.FileInfo = FileInfo{}
 
 func (f FileInfo) IsDir() bool {
-	return f.File.IsDir
+	return f.NamedFile.IsDir
 }
 
 func (f FileInfo) Name() string {
-	return f.File.Name
+	return f.NamedFile.Name
 }
 
 func (f FileInfo) ModTime() time.Time {
-	return f.File.ModTime
+	return f.NamedFile.ModTime
 }
 
 func (f FileInfo) Type() fs.FileMode {
-	return f.File.Mode & fs.ModeType
+	return f.NamedFile.Mode & fs.ModeType
 }
 
 func (f FileInfo) Mode() fs.FileMode {
-	return f.File.Mode
+	return f.NamedFile.Mode
 }
 
 func (f FileInfo) Size() int64 {
-	return f.File.Size
+	return f.NamedFile.Size
 }
 
 func (f FileInfo) Sys() any {

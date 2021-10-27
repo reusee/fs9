@@ -23,7 +23,7 @@ func Ensure(
 		node Node,
 	) (Node, error) {
 		if node != nil {
-			file := node.(*File)
+			file := node.(*NamedFile)
 			if file.Name != name {
 				panic("impossible")
 			}
@@ -47,7 +47,7 @@ func Write(
 	bytesWritten *int,
 ) Operation {
 	return func(node Node) (Node, error) {
-		file := node.(*File)
+		file := node.(*NamedFile)
 		if offset > file.Size {
 			return nil, we.With(
 				e4.Info("file size is %d, cannot write at %d", file.Size, offset),
@@ -78,7 +78,7 @@ func Read(
 	eof *bool,
 ) Operation {
 	return func(node Node) (Node, error) {
-		file := node.(*File)
+		file := node.(*NamedFile)
 		end := offset + length
 		if end > file.Size {
 			end = file.Size

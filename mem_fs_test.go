@@ -21,7 +21,7 @@ func TestMemFSOperations(t *testing.T) {
 	fs := NewMemFS()
 
 	ce(fs.Apply(KeyPath{"foo"}, nil, Ensure("foo", false, true)))
-	file := fs.Root.Entries.Nodes[0].(*File)
+	file := fs.Root.Entries.Nodes[0].(*NamedFile)
 	eq(
 		len(fs.Root.Entries.Nodes), 1,
 		file != nil, true,
@@ -30,7 +30,7 @@ func TestMemFSOperations(t *testing.T) {
 	)
 
 	ce(fs.Apply(KeyPath{"foo"}, nil, Ensure("foo", false, true)))
-	file = fs.Root.Entries.Nodes[0].(*File)
+	file = fs.Root.Entries.Nodes[0].(*NamedFile)
 	eq(
 		len(fs.Root.Entries.Nodes), 1,
 		file != nil, true,
@@ -39,7 +39,7 @@ func TestMemFSOperations(t *testing.T) {
 	)
 
 	ce(fs.Apply(KeyPath{"a"}, nil, Ensure("a", false, true)))
-	file = fs.Root.Entries.Nodes[0].(*File)
+	file = fs.Root.Entries.Nodes[0].(*NamedFile)
 	eq(
 		len(fs.Root.Entries.Nodes), 2,
 		file != nil, true,
@@ -48,7 +48,7 @@ func TestMemFSOperations(t *testing.T) {
 	)
 
 	ce(fs.Apply(KeyPath{"b"}, nil, Ensure("b", true, true)))
-	file = fs.Root.Entries.Nodes[1].(*File)
+	file = fs.Root.Entries.Nodes[1].(*NamedFile)
 	eq(
 		len(fs.Root.Entries.Nodes), 3,
 		file != nil, true,
@@ -67,7 +67,7 @@ func TestMemFSOperations(t *testing.T) {
 	)
 
 	err = fs.Apply(KeyPath{"a"}, nil, func(node Node) (Node, error) {
-		file := node.(*File)
+		file := node.(*NamedFile)
 		newFile := *file
 		newFile.Name = "foo"
 		return &newFile, nil
@@ -79,7 +79,7 @@ func TestMemFSOperations(t *testing.T) {
 	)
 
 	err = fs.Apply(KeyPath{"a"}, nil, func(node Node) (Node, error) {
-		file := node.(*File)
+		file := node.(*NamedFile)
 		newFile := *file
 		newFile.IsDir = true
 		return &newFile, nil
@@ -91,7 +91,7 @@ func TestMemFSOperations(t *testing.T) {
 	)
 
 	err = fs.Apply(KeyPath{"a", "foo"}, nil, func(node Node) (Node, error) {
-		file := node.(*File)
+		file := node.(*NamedFile)
 		return file, nil
 	})
 	eq(
@@ -102,7 +102,7 @@ func TestMemFSOperations(t *testing.T) {
 
 	var info os.FileInfo
 	ce(fs.Apply(KeyPath{"a"}, nil, func(node Node) (Node, error) {
-		file := node.(*File)
+		file := node.(*NamedFile)
 		info = file.Info()
 		return file, nil
 	}))

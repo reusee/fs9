@@ -13,9 +13,9 @@ type MemFS struct {
 	sync.RWMutex
 	ctx       Scope
 	version   Version
-	Root      *File
+	Root      *NamedFile
 	openedIDs map[FileID]int
-	detached  map[FileID]*File
+	detached  map[FileID]*NamedFile
 }
 
 type Version int64
@@ -31,7 +31,7 @@ func NewMemFS() *MemFS {
 		),
 		Root:      NewFile("_root_", true),
 		openedIDs: make(map[FileID]int),
-		detached:  make(map[FileID]*File),
+		detached:  make(map[FileID]*NamedFile),
 	}
 }
 
@@ -72,7 +72,7 @@ func (m *MemFS) OpenHandle(path string, opts ...OpenOption) (Handle, error) {
 		if err != nil {
 			return nil, err
 		}
-		id = ret.(*File).id
+		id = ret.(*NamedFile).id
 		return ret, nil
 	})
 	if err != nil {
@@ -137,7 +137,7 @@ func (m *MemFS) ApplyAll(specs ...ApplySpec) error {
 			if err != nil {
 				return err
 			}
-			newFile := newNode.(*File)
+			newFile := newNode.(*NamedFile)
 			if newFile != detached {
 				m.detached[fileID] = newFile
 			}
@@ -147,7 +147,7 @@ func (m *MemFS) ApplyAll(specs ...ApplySpec) error {
 		var err error
 		newNode, err := root.Mutate(ctx, spec.Path, func(node Node) (Node, error) {
 
-			if fileID > 0 && (node == nil || node.(*File).id != fileID) {
+			if fileID > 0 && (node == nil || node.(*NamedFile).id != fileID) {
 				// detached
 				detached, ok := m.detached[fileID]
 				if !ok {
@@ -157,7 +157,7 @@ func (m *MemFS) ApplyAll(specs ...ApplySpec) error {
 				if err != nil {
 					return nil, err
 				}
-				newFile := newNode.(*File)
+				newFile := newNode.(*NamedFile)
 				if newFile != detached {
 					m.detached[fileID] = newFile
 				}
@@ -171,7 +171,7 @@ func (m *MemFS) ApplyAll(specs ...ApplySpec) error {
 		if err != nil {
 			return err
 		}
-		root = newNode.(*File)
+		root = newNode.(*NamedFile)
 	}
 
 	if root != m.Root {
@@ -249,7 +249,7 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 		parts,
 		nil,
 		func(node Node) (Node, error) {
-			file := node.(*File)
+			file := node.(*NamedFile)
 			if file.IsDir && len(file.Entries.Nodes) > 0 && !spec.All {
 				return nil, we.With(
 					e4.Info("path: %s", path),
@@ -258,7 +258,7 @@ func (m *MemFS) Remove(path string, options ...RemoveOption) error {
 			if err := pp.Copy(
 				file.Walk(nil),
 				pp.Tap(func(v any) error {
-					file := v.(*File)
+					file := v.(*NamedFile)
 					if m.openedIDs[file.id] > 0 {
 						// add to detached files
 						if _, ok := m.detached[file.id]; !ok {

@@ -15,7 +15,7 @@ func TestFilePersistence(t *testing.T) {
 	var version Version
 	ctx := dscope.New(&version)
 	root := NewFile("root", true)
-	var files []*File
+	var files []*NamedFile
 	for i := 0; i < 1024; i++ {
 		root, err := root.Mutate(ctx, KeyPath{"foo"}, Ensure("foo", true, true))
 		ce(err)
@@ -39,7 +39,7 @@ func TestFilePersistence(t *testing.T) {
 		ce(err)
 		version++
 		ctx = ctx.Fork(&version)
-		files = append(files, file.(*File))
+		files = append(files, file.(*NamedFile))
 		root = file
 	}
 

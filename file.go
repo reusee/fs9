@@ -12,10 +12,14 @@ import (
 	"github.com/reusee/e4"
 )
 
+type NamedFile struct {
+	Name string
+	File
+}
+
 type File struct {
 	id      FileID
 	IsDir   bool
-	Name    string
 	Entries *NodeSet
 	Size    int64
 	Mode    os.FileMode
@@ -25,27 +29,29 @@ type File struct {
 
 type FileID int64
 
-func NewFile(name string, isDir bool) *File {
+func NewFile(name string, isDir bool) *NamedFile {
 	var mode fs.FileMode
 	if isDir {
 		mode |= fs.ModeDir
 	}
-	return &File{
-		id:      FileID(rand.Int63()),
-		IsDir:   isDir,
-		Name:    name,
-		ModTime: time.Now(),
-		Mode:    mode,
+	return &NamedFile{
+		Name: name,
+		File: File{
+			id:      FileID(rand.Int63()),
+			IsDir:   isDir,
+			ModTime: time.Now(),
+			Mode:    mode,
+		},
 	}
 }
 
-var _ Node = new(File)
+var _ Node = new(NamedFile)
 
-func (f *File) KeyRange() (Key, Key) {
+func (f *NamedFile) KeyRange() (Key, Key) {
 	return f.Name, f.Name
 }
 
-func (f *File) Mutate(ctx Scope, path KeyPath, fn func(Node) (Node, error)) (Node, error) {
+func (f *NamedFile) Mutate(ctx Scope, path KeyPath, fn func(Node) (Node, error)) (Node, error) {
 
 	if len(path) == 0 {
 		newNode, err := fn(f)
@@ -53,7 +59,7 @@ func (f *File) Mutate(ctx Scope, path KeyPath, fn func(Node) (Node, error)) (Nod
 			return nil, we(err)
 		}
 		if newNode != nil {
-			if err := f.checkNewFile(newNode.(*File)); err != nil {
+			if err := f.checkNewFile(newNode.(*NamedFile)); err != nil {
 				return nil, we(err)
 			}
 		}
@@ -90,7 +96,7 @@ func (f *File) Mutate(ctx Scope, path KeyPath, fn func(Node) (Node, error)) (Nod
 	return f, nil
 }
 
-func (f *File) Walk(cont Src) Src {
+func (f *NamedFile) Walk(cont Src) Src {
 	return func() (any, Src, error) {
 		if f.Entries == nil {
 			return f, cont, nil
@@ -99,13 +105,13 @@ func (f *File) Walk(cont Src) Src {
 	}
 }
 
-func (f *File) Info() FileInfo {
+func (f *NamedFile) Info() FileInfo {
 	return FileInfo{
-		File: f,
+		NamedFile: f,
 	}
 }
 
-func (f *File) Dump(w io.Writer, level int) {
+func (f *NamedFile) Dump(w io.Writer, level int) {
 	if w == nil {
 		w = os.Stdout
 	}
@@ -115,13 +121,13 @@ func (f *File) Dump(w io.Writer, level int) {
 	}
 }
 
-func (f *File) wrapDump() e4.WrapFunc {
+func (f *NamedFile) wrapDump() e4.WrapFunc {
 	buf := new(strings.Builder)
 	f.Dump(buf, 0)
 	return e4.Info("%s", buf.String())
 }
 
-func (f *File) checkNewFile(newFile *File) error {
+func (f *NamedFile) checkNewFile(newFile *NamedFile) error {
 	if f == nil || newFile == nil {
 		return nil
 	}
