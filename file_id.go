@@ -33,7 +33,7 @@ func (n NamedFileID) Mutate(ctx Scope, path KeyPath, fn func(Node) (Node, error)
 }
 
 func (n NamedFileID) Dump(w io.Writer, level int) {
-	fmt.Fprintf(w, "%snamed file: %s %d", strings.Repeat(" ", level), n.Name, n.ID)
+	fmt.Fprintf(w, "%snamed file: %s %d\n", strings.Repeat(" ", level), n.Name, n.ID)
 	//TODO dump *File of the ID
 }
 

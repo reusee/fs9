@@ -18,6 +18,8 @@ github.com/reusee/e4qa v0.0.0-20210413061912-3faa8fbddd5d h1:KCtarNB893QCZu623Bq
 github.com/reusee/e4qa v0.0.0-20210413061912-3faa8fbddd5d/go.mod h1:vidc0yrUFs8XWkRFLlQOebuKd5nD7srCvdFxu60rd/8=
 github.com/reusee/it v0.0.0-20211026164155-57df681a184f h1:GrKXF+9A4LHkAg8AnDCG8MCqtv28koE/deUHOzhcYNo=
 github.com/reusee/it v0.0.0-20211026164155-57df681a184f/go.mod h1:mgMQfZ3fcM4Cxx8mX1Qu6zcw4gAJG80RAzQq1a32jKw=
+github.com/reusee/it v0.0.0-20211104161728-8f088e57af09 h1:IgzpLtazCp+k1fn5XEInFTpqYCzli78v1j3bRUn/KSI=
+github.com/reusee/it v0.0.0-20211104161728-8f088e57af09/go.mod h1:mgMQfZ3fcM4Cxx8mX1Qu6zcw4gAJG80RAzQq1a32jKw=
 github.com/reusee/pa v0.0.0-20210520023210-223bb0bf8859 h1:O9D09CNGaoSUf6AXzucwsWg7nq5KVDZYlQxiq/yLaTY=
 github.com/reusee/pa v0.0.0-20210520023210-223bb0bf8859/go.mod h1:C9gqQgJDI71DlKfvNyg1LDo2g9nL8wlHGTvSNC94k4Y=
 github.com/reusee/pp v0.0.0-20211003125005-d93fee3792f3 h1:Hog852F0QJR6obfRwnQTUNTPVDtrNBZdrISjF/HB7J4=

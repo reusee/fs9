@@ -15,7 +15,13 @@ func eq(args ...any) {
 			sb.Marshal(args[i]),
 			sb.Marshal(args[i+1]),
 		) != 0 {
-			ce(fmt.Errorf("pair %d / %d not equal", i, i+1))
+			ce(fmt.Errorf(
+				"pair %d / %d not equal\nleft: %+v\nright: %+v",
+				i,
+				i+1,
+				args[i],
+				args[i+1],
+			))
 		}
 	}
 }

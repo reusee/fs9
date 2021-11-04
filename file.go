@@ -9,6 +9,7 @@ import (
 )
 
 type File struct {
+	ID      FileID
 	IsDir   bool
 	Name    string
 	Size    int64
@@ -20,7 +21,7 @@ type File struct {
 var _ Node = new(File)
 
 func (f File) KeyRange() (Key, Key) {
-	return f.Name, f.Name
+	return f.ID, f.ID
 }
 
 func (f *File) Mutate(
@@ -48,7 +49,7 @@ func (f *File) Mutate(
 }
 
 func (f File) Dump(w io.Writer, level int) {
-	fmt.Fprintf(w, "%sfile: %+v", strings.Repeat(" ", level), f)
+	fmt.Fprintf(w, "%sfile: %+v\n", strings.Repeat(" ", level), f)
 	//TODO dump subs
 }
 
