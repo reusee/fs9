@@ -6,10 +6,13 @@ jobs:
     name: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-go@v2
-        with:
-          go-version: 1.17.x
-      - uses: actions/checkout@v1
+      - name: Install latest golang-tip on Actions runner
+        run: |
+          curl -o go.tar.gz -L \
+            https://github.com/AlekSi/golang-tip/releases/download/tip/master.linux-amd64.tar.gz
+          sudo tar -C /usr/local -xzf go.tar.gz
+          sudo ln -s /usr/local/go/bin/* /usr/local/bin/
+      - uses: actions/checkout@v2
       - name: go test
         run: |
           go test -race
