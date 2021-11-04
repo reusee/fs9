@@ -12,4 +12,5 @@ var (
 	ErrDirNotEmpty  = errors.New("dir not empty")
 	ErrClosed       = errors.New("closed")
 	ErrNodeNotFound = errors.New("node not found")
+	ErrImmutable    = errors.New("immutable")
 )
