@@ -1,6 +1,10 @@
 package fs9
 
-import "io"
+import (
+	"fmt"
+	"io"
+	"strings"
+)
 
 type FileID uint64
 
@@ -16,15 +20,25 @@ func (n NamedFileID) KeyRange() (Key, Key) {
 }
 
 func (n NamedFileID) Mutate(ctx Scope, path KeyPath, fn func(Node) (Node, error)) (Node, error) {
-	//TODO get file from id to descend
-	return fn(n)
+	if len(path) == 0 {
+		return fn(n)
+	}
+	var get GetFileByID
+	ctx.Assign(&get)
+	file, err := get(path[0].(FileID))
+	if err != nil {
+		return nil, err
+	}
+	return file.Mutate(ctx, path, fn)
 }
 
 func (n NamedFileID) Dump(w io.Writer, level int) {
-	//TODO
+	fmt.Fprintf(w, "%snamed file: %s %d", strings.Repeat(" ", level), n.Name, n.ID)
+	//TODO dump *File of the ID
 }
 
 func (n NamedFileID) Walk(cont Src) Src {
-	//TODO
-	return nil
+	return func() (any, Src, error) {
+		return n, cont, nil
+	}
 }

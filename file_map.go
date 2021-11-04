@@ -1,7 +1,9 @@
 package fs9
 
 import (
+	"fmt"
 	"io"
+	"strings"
 
 	"github.com/reusee/it"
 )
@@ -83,10 +85,10 @@ func (f FileMap) Mutate(
 }
 
 func (f FileMap) Dump(w io.Writer, level int) {
-	//TODO
+	fmt.Fprintf(w, "%sfile map %x", strings.Repeat(" ", level), f.shardKey)
+	f.subs.Dump(w, level+1)
 }
 
 func (f FileMap) Walk(cont Src) Src {
-	//TODO
-	return nil
+	return f.subs.Walk(cont)
 }

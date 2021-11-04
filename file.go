@@ -1,8 +1,10 @@
 package fs9
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
+	"strings"
 	"time"
 )
 
@@ -29,18 +31,31 @@ func (f *File) Mutate(
 	retNode Node,
 	err error,
 ) {
-	//TODO
-
-	return
+	if len(path) == 0 {
+		return fn(f)
+	}
+	newNode, err := f.Subs.Mutate(ctx, path, fn)
+	if err != nil {
+		return nil, err
+	}
+	newSubs := newNode.(*NodeSet)
+	if newSubs != f.Subs {
+		newFile := *f
+		newFile.Subs = newSubs
+		return &newFile, nil
+	}
+	return f, nil
 }
 
 func (f File) Dump(w io.Writer, level int) {
-	//TODO
+	fmt.Fprintf(w, "%sfile: %+v", strings.Repeat(" ", level), f)
+	//TODO dump subs
 }
 
-func (f File) Walk(cont Src) Src {
-	//TODO
-	return nil
+func (f *File) Walk(cont Src) Src {
+	return func() (any, Src, error) {
+		return f, f.Subs.Walk(cont), nil
+	}
 }
 
 func (f File) Stat() (FileInfo, error) {
