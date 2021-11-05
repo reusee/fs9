@@ -135,7 +135,7 @@ func (m *MemFS) GetFileIDByPath(root FileID, path []string) (FileID, error) {
 		if node == nil {
 			return nil, we(ErrFileNotFound)
 		}
-		id = node.(NamedFileID).ID
+		id = node.(DirEntry).id
 		return node, nil
 	})
 	if err != nil {
@@ -207,9 +207,12 @@ func (m *MemFS) makeFile(
 		}
 		fileMap = newNode.(*FileMap)
 
-		return NamedFileID{
-			Name: file.Name,
-			ID:   file.ID,
+		return DirEntry{
+			id:    file.ID,
+			name:  file.Name,
+			isDir: file.IsDir,
+			_type: file.Mode & fs.ModeType,
+			fs:    m,
 		}, nil
 	})
 	if err != nil {

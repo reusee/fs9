@@ -16,7 +16,10 @@ type File struct {
 	Mode    fs.FileMode
 	ModTime time.Time
 	Subs    *NodeSet // name -> NamedFileID
+	Content []byte
 }
+
+type FileID uint64
 
 var _ Node = new(File)
 
@@ -50,7 +53,9 @@ func (f *File) Mutate(
 
 func (f File) Dump(w io.Writer, level int) {
 	fmt.Fprintf(w, "%sfile: %+v\n", strings.Repeat(" ", level), f)
-	//TODO dump subs
+	if f.Subs != nil {
+		f.Subs.Dump(w, level+1)
+	}
 }
 
 func (f *File) Walk(cont Src) Src {
@@ -67,4 +72,25 @@ func (f File) Stat() (FileInfo, error) {
 		modTime: f.ModTime,
 		isDir:   f.IsDir,
 	}, nil
+}
+
+func (f File) ReadAt(buf []byte, offset int64) (n int, err error) {
+	end := int(offset) + len(buf)
+	if end > len(f.Content) {
+		end = len(f.Content)
+	}
+	n = copy(buf, f.Content[offset:end])
+	if n < len(buf) {
+		err = io.EOF
+	}
+	return
+}
+
+func (f File) WriteAt(data []byte, offset int64) (int, error) {
+	if l := int(offset) + len(data); l > len(f.Content) {
+		newContent := make([]byte, l)
+		copy(newContent, f.Content)
+	}
+	copy(f.Content[offset:], data)
+	return len(data), nil
 }
