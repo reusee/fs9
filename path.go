@@ -8,18 +8,24 @@ import (
 )
 
 func PathToSlice(path string) (ret []string, err error) {
+	if path == "" {
+		return
+	}
 	if !fs.ValidPath(path) {
 		return nil, we.With(
-			e4.Info("path: %s", path),
+			e4.Info("path: %q", path),
 		)(ErrInvalidPath)
 	}
 	return strings.Split(path, "/"), nil
 }
 
 func PathToKeyPath(path string) (ret KeyPath, err error) {
+	if path == "" {
+		return
+	}
 	if !fs.ValidPath(path) {
 		return nil, we.With(
-			e4.Info("path: %s", path),
+			e4.Info("path: %q", path),
 		)(ErrInvalidPath)
 	}
 	for _, part := range strings.Split(path, "/") {

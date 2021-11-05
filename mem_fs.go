@@ -3,6 +3,7 @@ package fs9
 import (
 	"io/fs"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/reusee/dscope"
@@ -64,13 +65,32 @@ func (m *MemFS) Open(path string) (fs.File, error) {
 func (m *MemFS) OpenHandle(path string, options ...OpenOption) (Handle, error) {
 	parts, err := PathToSlice(path)
 	if err != nil {
-		return nil, err
+		return nil, we(err)
 	}
+
+	var spec openSpec
+	for _, option := range options {
+		option(&spec)
+	}
+
 	id, err := m.GetFileIDByPath(m.rootID, parts)
 	if err != nil {
-		return nil, err
+
+		if is(err, ErrFileNotFound) && spec.Create {
+			// try create
+			file, err := m.makeFile(parts, false)
+			if err != nil {
+				return nil, we(err)
+			}
+			id = file.ID
+
+		} else {
+			return nil, we(err)
+		}
 	}
+
 	return &MemHandle{
+		fs: m,
 		id: id,
 	}, nil
 }
@@ -87,12 +107,16 @@ func (m *MemFS) stat(id FileID) (info FileInfo, err error) {
 
 func (m *MemFS) GetFileByID(id FileID) (*File, error) {
 	var file *File
-	_, err := m.files.Mutate(m.ctx, m.files.GetPath(id), func(node Node) (Node, error) {
-		file = node.(*File)
-		return node, nil
-	})
+	_, err := m.files.Mutate(
+		m.ctx,
+		m.files.GetPath(id),
+		func(node Node) (Node, error) {
+			file = node.(*File)
+			return node, nil
+		},
+	)
 	if err != nil {
-		return nil, err
+		return nil, we(err)
 	}
 	return file, nil
 }
@@ -103,19 +127,19 @@ func (m *MemFS) GetFileIDByPath(root FileID, path []string) (FileID, error) {
 	}
 	file, err := m.GetFileByID(root)
 	if err != nil {
-		return 0, err
+		return 0, we(err)
 	}
 	name := path[0]
 	var id FileID
 	_, err = file.Subs.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
 		if node == nil {
-			return nil, ErrFileNotFound
+			return nil, we(ErrFileNotFound)
 		}
 		id = node.(NamedFileID).ID
 		return node, nil
 	})
 	if err != nil {
-		return 0, err
+		return 0, we(err)
 	}
 	return m.GetFileIDByPath(id, path[1:])
 }
@@ -123,29 +147,37 @@ func (m *MemFS) GetFileIDByPath(root FileID, path []string) (FileID, error) {
 func (m *MemFS) MakeDir(p string) error {
 	parts, err := PathToSlice(p)
 	if err != nil {
-		return err
+		return we(err)
 	}
 	if len(parts) == 0 {
 		return nil
 	}
-	return m.makeDir(parts)
+	_, err = m.makeFile(parts, true)
+	if err != nil {
+		return we(err)
+	}
+	return nil
 }
 
-func (m *MemFS) makeDir(parts []string) error {
+func (m *MemFS) makeFile(
+	parts []string,
+	isDir bool,
+) (*File, error) {
 
 	// get parent
 	parentID, err := m.GetFileIDByPath(m.rootID, parts[:len(parts)-1])
 	if err != nil {
-		return err
+		return nil, we(err)
 	}
 	parentFile, err := m.GetFileByID(parentID)
 	if err != nil {
-		return err
+		return nil, we(err)
 	}
 
 	// add to parent file
 	fileMap := m.files
 	name := parts[len(parts)-1]
+	var file *File
 	newParentNode, err := parentFile.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
 		if node != nil {
 			// already exists
@@ -153,11 +185,15 @@ func (m *MemFS) makeDir(parts []string) error {
 		}
 
 		// add new file
-		file := &File{
+		var mode fs.FileMode
+		if isDir {
+			mode |= fs.ModeDir
+		}
+		file = &File{
 			ID:      FileID(rand.Int63()),
-			IsDir:   true,
+			IsDir:   isDir,
 			Name:    name,
-			Mode:    fs.ModeDir,
+			Mode:    mode,
 			ModTime: time.Now(),
 		}
 		newNode, err := fileMap.Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
@@ -167,7 +203,7 @@ func (m *MemFS) makeDir(parts []string) error {
 			return file, nil
 		})
 		if err != nil {
-			return nil, err
+			return nil, we(err)
 		}
 		fileMap = newNode.(*FileMap)
 
@@ -177,7 +213,7 @@ func (m *MemFS) makeDir(parts []string) error {
 		}, nil
 	})
 	if err != nil {
-		return err
+		return nil, we(err)
 	}
 
 	// update parent and map
@@ -186,22 +222,23 @@ func (m *MemFS) makeDir(parts []string) error {
 	})
 	m.files = newMapNode.(*FileMap)
 
-	return nil
+	return file, nil
 }
 
 func (m *MemFS) MakeDirAll(p string) error {
 	parts, err := PathToSlice(p)
 	if err != nil {
-		return err
+		return we(err)
 	}
 	if len(parts) == 0 {
 		return nil
 	}
 	for i := 1; i < len(parts); i++ {
-		if err := m.makeDir(parts[:i]); err != nil {
-			return err
+		if _, err := m.makeFile(parts[:i], true); err != nil {
+			return we(err)
 		}
 	}
+	m.files.Dump(os.Stdout, 0)
 	return nil
 }
 
@@ -209,7 +246,7 @@ func (m *MemFS) Remove(p string, options ...RemoveOption) error {
 
 	parts, err := PathToSlice(p)
 	if err != nil {
-		return err
+		return we(err)
 	}
 	if len(parts) == 0 {
 		return nil
@@ -218,11 +255,11 @@ func (m *MemFS) Remove(p string, options ...RemoveOption) error {
 	// get parent
 	parentID, err := m.GetFileIDByPath(m.rootID, parts[:len(parts)-1])
 	if err != nil {
-		return err
+		return we(err)
 	}
 	parentFile, err := m.GetFileByID(parentID)
 	if err != nil {
-		return err
+		return we(err)
 	}
 
 	// remove from parent file
@@ -230,12 +267,12 @@ func (m *MemFS) Remove(p string, options ...RemoveOption) error {
 	name := parts[len(parts)-1]
 	newParentNode, err := parentFile.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
 		if node == nil {
-			return nil, ErrFileNotFound
+			return nil, we(ErrFileNotFound)
 		}
 		return nil, nil
 	})
 	if err != nil {
-		return err
+		return we(err)
 	}
 
 	// update parent and map

@@ -67,6 +67,11 @@ func testFS(
 				}
 			}
 
+			_, err = fs.Open(dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			// write
 			h, err := fs.OpenHandle(path, OptCreate(true))
 			ce(err)

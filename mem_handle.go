@@ -1,6 +1,7 @@
 package fs9
 
 import (
+	"io"
 	"io/fs"
 )
 
@@ -17,7 +18,7 @@ func (m MemHandle) Stat() (fs.FileInfo, error) {
 
 func (m *MemHandle) Read(buf []byte) (n int, err error) {
 	//TODO
-	return
+	return 0, io.EOF
 }
 
 func (m *MemHandle) ReadAt(buf []byte, offset int64) (n int, err error) {
@@ -42,5 +43,5 @@ func (m *MemHandle) Write(data []byte) (int, error) {
 
 func (m *MemHandle) ReadDir(n int) ([]fs.DirEntry, error) {
 	//TODO
-	return nil, nil
+	return nil, io.EOF
 }
