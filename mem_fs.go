@@ -37,8 +37,8 @@ func (m *MemFS) Open(path string) (fs.File, error) {
 }
 
 func (m *MemFS) OpenHandle(path string) (*MemHandle, error) {
-	var parts []string
-	if err := SplitPath(path, &parts); err != nil {
+	parts, err := PathToSlice(path)
+	if err != nil {
 		return nil, err
 	}
 	id, err := m.GetFileIDByPath(m.rootID, parts)
