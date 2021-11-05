@@ -96,8 +96,15 @@ func (m *MemHandle) Write(data []byte) (n int, err error) {
 	if err != nil {
 		return 0, err
 	}
-	n, err = file.WriteAt(data, m.offset)
+	var newFile *File
+	newFile, n, err = file.WriteAt(data, m.offset)
+	if err != nil {
+		return 0, err
+	}
 	m.offset += int64(n)
+	if err := m.fs.updateFile(newFile); err != nil {
+		return 0, err
+	}
 	return
 }
 

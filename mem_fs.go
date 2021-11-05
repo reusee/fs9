@@ -228,6 +228,17 @@ func (m *MemFS) makeFile(
 	return file, nil
 }
 
+func (m *MemFS) updateFile(file *File) error {
+	newMapNode, err := m.files.Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
+		return file, nil
+	})
+	if err != nil {
+		return err
+	}
+	m.files = newMapNode.(*FileMap)
+	return nil
+}
+
 func (m *MemFS) MakeDirAll(p string) error {
 	parts, err := PathToSlice(p)
 	if err != nil {

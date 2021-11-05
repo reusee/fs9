@@ -75,6 +75,9 @@ func (f File) Stat() (FileInfo, error) {
 }
 
 func (f File) ReadAt(buf []byte, offset int64) (n int, err error) {
+	if int(offset) > len(f.Content) {
+		offset = int64(len(f.Content))
+	}
 	end := int(offset) + len(buf)
 	if end > len(f.Content) {
 		end = len(f.Content)
@@ -86,11 +89,14 @@ func (f File) ReadAt(buf []byte, offset int64) (n int, err error) {
 	return
 }
 
-func (f File) WriteAt(data []byte, offset int64) (int, error) {
+func (f *File) WriteAt(data []byte, offset int64) (*File, int, error) {
+	newFile := *f
 	if l := int(offset) + len(data); l > len(f.Content) {
-		newContent := make([]byte, l)
-		copy(newContent, f.Content)
+		newFile.Content = make([]byte, l)
+	} else {
+		newFile.Content = make([]byte, len(f.Content))
 	}
-	copy(f.Content[offset:], data)
-	return len(data), nil
+	copy(newFile.Content, f.Content)
+	copy(newFile.Content[offset:], data)
+	return &newFile, len(data), nil
 }
