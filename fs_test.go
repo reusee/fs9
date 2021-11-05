@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	iofs "io/fs"
 	"math/rand"
 	"sort"
@@ -294,6 +295,26 @@ func testFS(
 			bytes.Equal(content, []byte("foo")), true,
 		)
 
+	})
+
+	t.Run("snapshot persistence", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		//TODO
+	})
+
+	t.Run("mod time", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		s := newFS()
+		info, err := fs.Stat(s, ".")
+		ce(err)
+		modTime1 := info.ModTime()
+		ce(s.MakeDir("foo"))
+		info, err = fs.Stat(s, ".")
+		ce(err)
+		modTime2 := info.ModTime()
+		eq(
+			modTime2.After(modTime1), true,
+		)
 	})
 
 }

@@ -8,6 +8,7 @@ type FS interface {
 	MakeDir(path string) error
 	MakeDirAll(path string) error
 	Remove(path string, options ...RemoveOption) error
+	//TODO snapshot
 }
 
 type OpenOption func(*openSpec)

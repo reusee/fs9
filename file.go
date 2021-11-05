@@ -46,6 +46,11 @@ func (f *File) Mutate(
 	if newSubs != f.Subs {
 		newFile := *f
 		newFile.Subs = newSubs
+		now := time.Now()
+		if now.Equal(newFile.ModTime) {
+			now = now.Add(time.Nanosecond)
+		}
+		newFile.ModTime = now
 		return &newFile, nil
 	}
 	return f, nil
@@ -99,5 +104,10 @@ func (f *File) WriteAt(data []byte, offset int64) (*File, int, error) {
 	copy(newFile.Content, f.Content)
 	copy(newFile.Content[offset:], data)
 	newFile.Size = int64(len(newFile.Content))
+	now := time.Now()
+	if now.Equal(newFile.ModTime) {
+		now = now.Add(time.Nanosecond)
+	}
+	newFile.ModTime = now
 	return &newFile, len(data), nil
 }
