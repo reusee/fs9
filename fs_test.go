@@ -46,6 +46,27 @@ func testFS(
 			err := fs.MakeDirAll(dir)
 			ce(err)
 
+			for i := 1; i < len(parts)-1; i++ {
+				dir := strings.Join(parts[:i], "/")
+				file, err := fs.Open(dir)
+				if err != nil {
+					t.Fatal(err)
+				}
+				stat, err := file.Stat()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !stat.IsDir() {
+					t.Fatal()
+				}
+				if stat.Name() != parts[i-1] {
+					t.Fatal()
+				}
+				if stat.Mode()&iofs.ModeDir == 0 {
+					t.Fatal()
+				}
+			}
+
 			// write
 			h, err := fs.OpenHandle(path, OptCreate(true))
 			ce(err)

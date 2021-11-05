@@ -18,10 +18,16 @@ var _ fs.FS = new(MemFS)
 
 var _ FS = new(MemFS)
 
+type GetFileByID func(id FileID) (*File, error)
+
+type GetFileIDByPath func(root FileID, path []string) (FileID, error)
+
 func NewMemFS() *MemFS {
 	m := &MemFS{
 		files: NewFileMap(2, 0),
 	}
+
+	// ctx
 	m.ctx = dscope.New(
 		func() GetFileByID {
 			return m.GetFileByID
@@ -30,6 +36,24 @@ func NewMemFS() *MemFS {
 			return m.GetFileIDByPath
 		},
 	)
+
+	// root file
+	rootFile := &File{
+		ID:      FileID(rand.Int63()),
+		IsDir:   true,
+		Name:    "root",
+		Mode:    fs.ModeDir,
+		ModTime: time.Now(),
+	}
+	newNode, err := m.files.Mutate(m.ctx, m.files.GetPath(rootFile.ID), func(node Node) (Node, error) {
+		return rootFile, nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	m.files = newNode.(*FileMap)
+	m.rootID = rootFile.ID
+
 	return m
 }
 
@@ -61,11 +85,9 @@ func (m *MemFS) stat(id FileID) (info FileInfo, err error) {
 	return
 }
 
-type GetFileByID func(id FileID) (*File, error)
-
 func (m *MemFS) GetFileByID(id FileID) (*File, error) {
 	var file *File
-	_, err := m.files.Mutate(m.ctx, KeyPath{id}, func(node Node) (Node, error) {
+	_, err := m.files.Mutate(m.ctx, m.files.GetPath(id), func(node Node) (Node, error) {
 		file = node.(*File)
 		return node, nil
 	})
@@ -74,8 +96,6 @@ func (m *MemFS) GetFileByID(id FileID) (*File, error) {
 	}
 	return file, nil
 }
-
-type GetFileIDByPath func(root FileID, path []string) (FileID, error)
 
 func (m *MemFS) GetFileIDByPath(root FileID, path []string) (FileID, error) {
 	if len(path) == 0 {
@@ -108,18 +128,22 @@ func (m *MemFS) MakeDir(p string) error {
 	if len(parts) == 0 {
 		return nil
 	}
+	return m.makeDir(parts)
+}
 
-	// ensure parent
-	parent, err := m.GetFileIDByPath(m.rootID, parts[:len(parts)-1])
+func (m *MemFS) makeDir(parts []string) error {
+
+	// get parent
+	parentID, err := m.GetFileIDByPath(m.rootID, parts[:len(parts)-1])
+	if err != nil {
+		return err
+	}
+	parentFile, err := m.GetFileByID(parentID)
 	if err != nil {
 		return err
 	}
 
-	// add to parent
-	parentFile, err := m.GetFileByID(parent)
-	if err != nil {
-		return err
-	}
+	// add to parent file
 	fileMap := m.files
 	name := parts[len(parts)-1]
 	newParentNode, err := parentFile.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
@@ -156,8 +180,8 @@ func (m *MemFS) MakeDir(p string) error {
 		return err
 	}
 
-	// modify parent
-	newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parent), func(node Node) (Node, error) {
+	// update parent and map
+	newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parentID), func(node Node) (Node, error) {
 		return newParentNode, nil
 	})
 	m.files = newMapNode.(*FileMap)
@@ -165,12 +189,60 @@ func (m *MemFS) MakeDir(p string) error {
 	return nil
 }
 
-func (m *MemFS) MakeDirAll(path string) error {
-	//TODO
+func (m *MemFS) MakeDirAll(p string) error {
+	parts, err := PathToSlice(p)
+	if err != nil {
+		return err
+	}
+	if len(parts) == 0 {
+		return nil
+	}
+	for i := 1; i < len(parts); i++ {
+		if err := m.makeDir(parts[:i]); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (m *MemFS) Remove(path string, options ...RemoveOption) error {
-	//TODO
+func (m *MemFS) Remove(p string, options ...RemoveOption) error {
+
+	parts, err := PathToSlice(p)
+	if err != nil {
+		return err
+	}
+	if len(parts) == 0 {
+		return nil
+	}
+
+	// get parent
+	parentID, err := m.GetFileIDByPath(m.rootID, parts[:len(parts)-1])
+	if err != nil {
+		return err
+	}
+	parentFile, err := m.GetFileByID(parentID)
+	if err != nil {
+		return err
+	}
+
+	// remove from parent file
+	fileMap := m.files
+	name := parts[len(parts)-1]
+	newParentNode, err := parentFile.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
+		if node == nil {
+			return nil, ErrFileNotFound
+		}
+		return nil, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// update parent and map
+	newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parentID), func(node Node) (Node, error) {
+		return newParentNode, nil
+	})
+	m.files = newMapNode.(*FileMap)
+
 	return nil
 }
