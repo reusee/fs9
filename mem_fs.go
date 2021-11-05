@@ -25,6 +25,9 @@ func NewMemFS() *MemFS {
 		func() GetFileByID {
 			return m.GetFileByID
 		},
+		func() GetFileIDByPath {
+			return m.GetFileIDByPath
+		},
 	)
 	return m
 }
@@ -34,19 +37,12 @@ func (m *MemFS) Open(path string) (fs.File, error) {
 }
 
 func (m *MemFS) OpenHandle(path string) (*MemHandle, error) {
-	rootFile, err := m.GetFileByID(m.rootID)
-	if err != nil {
+	var parts []string
+	if err := SplitPath(path, &parts); err != nil {
 		return nil, err
 	}
-	var id FileID
-	keyPath, err := SplitPath(path)
+	id, err := m.GetFileIDByPath(m.rootID, parts)
 	if err != nil {
-		return nil, we(err)
-	}
-	if _, err := rootFile.Mutate(m.ctx, keyPath, func(node Node) (Node, error) {
-		id = node.(NamedFileID).ID
-		return node, nil
-	}); err != nil {
 		return nil, err
 	}
 	return &MemHandle{
@@ -76,4 +72,29 @@ func (m *MemFS) GetFileByID(id FileID) (*File, error) {
 		return nil, err
 	}
 	return file, nil
+}
+
+type GetFileIDByPath func(root FileID, path []string) (FileID, error)
+
+func (m *MemFS) GetFileIDByPath(root FileID, path []string) (FileID, error) {
+	if len(path) == 0 {
+		return root, nil
+	}
+	file, err := m.GetFileByID(root)
+	if err != nil {
+		return 0, err
+	}
+	name := path[0]
+	var id FileID
+	_, err = file.Subs.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
+		if node == nil {
+			return nil, ErrFileNotFound
+		}
+		id = node.(NamedFileID).ID
+		return node, nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return m.GetFileIDByPath(id, path[1:])
 }
