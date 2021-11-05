@@ -15,7 +15,7 @@ type File struct {
 	Size    int64
 	Mode    fs.FileMode
 	ModTime time.Time
-	Subs    *NodeSet // NamedFileID
+	Subs    *NodeSet // name -> NamedFileID
 }
 
 var _ Node = new(File)
