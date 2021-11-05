@@ -3,14 +3,15 @@ package fs9
 import "errors"
 
 var (
-	ErrInvalidPath  = errors.New("invalid path")
-	ErrInvalidName  = errors.New("invalid name")
+	ErrClosed       = errors.New("closed")
+	ErrDirNotEmpty  = errors.New("dir not empty")
+	ErrFileExisted  = errors.New("file existed")
 	ErrFileNotFound = errors.New("file not found")
+	ErrImmutable    = errors.New("immutable")
+	ErrInvalidName  = errors.New("invalid name")
+	ErrInvalidPath  = errors.New("invalid path")
+	ErrNameMismatch = errors.New("name mismatch")
+	ErrNodeNotFound = errors.New("node not found")
 	ErrOutOfBounds  = errors.New("out of bounds")
 	ErrTypeMismatch = errors.New("type mismatch")
-	ErrNameMismatch = errors.New("name mismatch")
-	ErrDirNotEmpty  = errors.New("dir not empty")
-	ErrClosed       = errors.New("closed")
-	ErrNodeNotFound = errors.New("node not found")
-	ErrImmutable    = errors.New("immutable")
 )

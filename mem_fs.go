@@ -3,7 +3,6 @@ package fs9
 import (
 	"io/fs"
 	"math/rand"
-	"os"
 	"time"
 
 	"github.com/reusee/dscope"
@@ -181,7 +180,7 @@ func (m *MemFS) makeFile(
 	newParentNode, err := parentFile.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
 		if node != nil {
 			// already exists
-			return node, nil
+			return node, we(ErrFileExisted)
 		}
 
 		// add new file
@@ -247,12 +246,14 @@ func (m *MemFS) MakeDirAll(p string) error {
 	if len(parts) == 0 {
 		return nil
 	}
-	for i := 1; i < len(parts); i++ {
+	for i := 1; i < len(parts)+1; i++ {
 		if _, err := m.makeFile(parts[:i], true); err != nil {
+			if is(err, ErrFileExisted) {
+				continue
+			}
 			return we(err)
 		}
 	}
-	m.files.Dump(os.Stdout, 0)
 	return nil
 }
 

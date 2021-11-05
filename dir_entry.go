@@ -36,7 +36,7 @@ func (d DirEntry) Info() (fs.FileInfo, error) {
 }
 
 func (d DirEntry) KeyRange() (Key, Key) {
-	return d.Name, d.Name
+	return d.name, d.name
 }
 
 func (d DirEntry) Mutate(ctx Scope, path KeyPath, fn func(Node) (Node, error)) (Node, error) {

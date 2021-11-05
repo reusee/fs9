@@ -8,7 +8,7 @@ import (
 )
 
 func PathToSlice(path string) (ret []string, err error) {
-	if path == "" {
+	if path == "" || path == "." {
 		return
 	}
 	if !fs.ValidPath(path) {
@@ -20,7 +20,7 @@ func PathToSlice(path string) (ret []string, err error) {
 }
 
 func PathToKeyPath(path string) (ret KeyPath, err error) {
-	if path == "" {
+	if path == "" || path == "." {
 		return
 	}
 	if !fs.ValidPath(path) {
