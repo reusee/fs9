@@ -21,6 +21,7 @@ func testFS(
 	defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 
 	t.Run("basic operations", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()
 
 		dirNames := []string{"foo", "bar", "baz", "qux", "quux"}
@@ -144,6 +145,7 @@ func testFS(
 	})
 
 	t.Run("concurrent handle", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()
 
 		// write
@@ -247,7 +249,19 @@ func testFS(
 
 	})
 
+	t.Run("delete non-empty dir", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		fs := newFS()
+		ce(fs.MakeDirAll("foo/bar/baz"))
+		err := fs.Remove("foo")
+		eq(
+			is(err, ErrDirNotEmpty), true,
+		)
+		ce(fs.Remove("foo", OptAll(true)))
+	})
+
 	t.Run("test parent delete", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()
 
 		ce(fs.MakeDirAll("foo/bar/baz"))

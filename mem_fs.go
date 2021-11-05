@@ -267,6 +267,11 @@ func (m *MemFS) Remove(p string, options ...RemoveOption) error {
 		return nil
 	}
 
+	var spec removeSpec
+	for _, option := range options {
+		option(&spec)
+	}
+
 	// get parent
 	parentID, err := m.GetFileIDByPath(m.rootID, parts[:len(parts)-1])
 	if err != nil {
@@ -284,6 +289,27 @@ func (m *MemFS) Remove(p string, options ...RemoveOption) error {
 		if node == nil {
 			return nil, we(ErrFileNotFound)
 		}
+
+		if !spec.All {
+			// check empty
+			entry := node.(DirEntry)
+			if entry.IsDir() {
+				file, err := m.GetFileByID(entry.id)
+				if err != nil {
+					return nil, err
+				}
+				iter := file.Subs.Range(nil)
+				v, err := iter.Next()
+				if err != nil {
+					return nil, err
+				}
+				if v != nil {
+					// not empty
+					return nil, ErrDirNotEmpty
+				}
+			}
+		}
+
 		return nil, nil
 	})
 	if err != nil {
