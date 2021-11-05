@@ -1,6 +1,6 @@
 module github.com/reusee/fs9
 
-go 1.17
+go 1.18
 
 require (
 	github.com/reusee/dscope v0.0.0-20211015165530-41bdbb36de38

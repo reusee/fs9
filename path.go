@@ -7,14 +7,14 @@ import (
 	"github.com/reusee/e4"
 )
 
-func SplitPath(path string) (ret KeyPath, err error) {
+func SplitPath[T ~[]string](path string, target *T) (err error) {
 	if !fs.ValidPath(path) {
-		return nil, we.With(
+		return we.With(
 			e4.Info("path: %s", path),
 		)(ErrInvalidPath)
 	}
 	for _, part := range strings.Split(path, "/") {
-		ret = append(ret, part)
+		*target = append(*target, part)
 	}
 	return
 }
