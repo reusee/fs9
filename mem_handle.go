@@ -11,15 +11,16 @@ type MemHandle struct {
 
 var _ Handle = new(MemHandle)
 
-//TODO
-//var _ fs.ReadDirFile = new(MemHandle)
-//var _ io.ReaderAt = new(MemHandle)
-
 func (m MemHandle) Stat() (fs.FileInfo, error) {
 	return m.fs.stat(m.id)
 }
 
 func (m *MemHandle) Read(buf []byte) (n int, err error) {
+	//TODO
+	return
+}
+
+func (m *MemHandle) ReadAt(buf []byte, offset int64) (n int, err error) {
 	//TODO
 	return
 }
@@ -37,4 +38,9 @@ func (m *MemHandle) Seek(offset int64, whence int) (int64, error) {
 func (m *MemHandle) Write(data []byte) (int, error) {
 	//TODO
 	return 0, nil
+}
+
+func (m *MemHandle) ReadDir(n int) ([]fs.DirEntry, error) {
+	//TODO
+	return nil, nil
 }
