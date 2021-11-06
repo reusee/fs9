@@ -105,6 +105,11 @@ func testFS(
 			ce(err)
 			defer h.Close()
 
+			// name
+			if h.Name() != path {
+				t.Fatal()
+			}
+
 			// chagne mode
 			ce(fs.ChangeMode(path, 0755))
 			stat, err := iofs.Stat(fs, path)

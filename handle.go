@@ -15,7 +15,7 @@ type Handle interface {
 	//TODO
 	ChangeMode(mode fs.FileMode) error
 	ChangeOwner(uid, gid int) error
-	//Name() string
+	Name() string
 	//Sync() error
 	//Truncate(size int64) error
 }

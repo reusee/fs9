@@ -89,8 +89,9 @@ func (m *MemFS) OpenHandle(path string, options ...OpenOption) (Handle, error) {
 	}
 
 	return &MemHandle{
-		fs: m,
-		id: id,
+		name: path,
+		fs:   m,
+		id:   id,
 	}, nil
 }
 

@@ -11,6 +11,7 @@ type MemHandle struct {
 	sync.Mutex
 	fs          *MemFS
 	id          FileID
+	name        string
 	offset      int64
 	closed      bool
 	iter        Src
@@ -19,7 +20,11 @@ type MemHandle struct {
 
 var _ Handle = new(MemHandle)
 
-func (m MemHandle) Stat() (fs.FileInfo, error) {
+func (m *MemHandle) Name() string {
+	return m.name
+}
+
+func (m *MemHandle) Stat() (fs.FileInfo, error) {
 	m.Lock()
 	if m.closed {
 		return nil, ErrClosed
