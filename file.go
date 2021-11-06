@@ -16,6 +16,7 @@ type File struct {
 	Mode    fs.FileMode
 	ModTime time.Time
 	Subs    *NodeSet // name -> NamedFileID
+	Symlink string
 	Content []byte
 }
 

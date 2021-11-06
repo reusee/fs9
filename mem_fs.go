@@ -346,6 +346,9 @@ func (m *MemFS) changeFile(name string, fn func(*File) error) error {
 	if err != nil {
 		return err
 	}
+	if file.Mode&fs.ModeSymlink > 0 {
+		return m.changeFile(file.Symlink, fn)
+	}
 	newFile := *file
 	if err := fn(&newFile); err != nil {
 		return err
@@ -357,6 +360,9 @@ func (m *MemFS) changeFileByID(id FileID, fn func(*File) error) error {
 	file, err := m.GetFileByID(id)
 	if err != nil {
 		return err
+	}
+	if file.Mode&fs.ModeSymlink > 0 {
+		return m.changeFile(file.Symlink, fn)
 	}
 	newFile := *file
 	if err := fn(&newFile); err != nil {
