@@ -29,6 +29,16 @@ type File struct {
 
 type FileID uint64
 
+func (f FileID) Cmp(i any) int {
+	b := i.(FileID)
+	if f < b {
+		return -1
+	} else if f > b {
+		return 1
+	}
+	return 0
+}
+
 func NewFile(name string, isDir bool) *File {
 	var mode fs.FileMode
 	if isDir {
