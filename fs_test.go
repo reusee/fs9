@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/reusee/e4"
 )
@@ -166,6 +167,26 @@ func testFS(
 			ce(err)
 			eq(
 				len(data), 99,
+			)
+
+			// change times
+			t1 := time.Now().Add(-time.Hour)
+			t2 := time.Now().Add(-time.Minute)
+			ce(fs.ChangeTimes(path, t1, t2))
+			stat, err = iofs.Stat(fs, path)
+			ce(err)
+			ext = stat.Sys().(ExtFileInfo)
+			eq(
+				stat.ModTime(), t2,
+				ext.AccessTime, t1,
+			)
+			ce(h.ChangeTimes(t2, t1))
+			stat, err = h.Stat()
+			ce(err)
+			ext = stat.Sys().(ExtFileInfo)
+			eq(
+				stat.ModTime(), t1,
+				ext.AccessTime, t2,
 			)
 
 		}

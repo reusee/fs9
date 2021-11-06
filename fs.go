@@ -2,6 +2,7 @@ package fs9
 
 import (
 	"io/fs"
+	"time"
 )
 
 type FS interface {
@@ -10,7 +11,7 @@ type FS interface {
 	//TODO
 	ChangeMode(name string, mode fs.FileMode) error
 	ChangeOwner(name string, uid, gid int) error
-	//ChangeTimes(name string, atime time.Time, mtime time.Time) error
+	ChangeTimes(name string, atime time.Time, mtime time.Time) error
 	//Create(name string) (Handle, error)
 	//Link(oldname, newname string) error
 	//LinkChangeOwner(name string, uid, gid int) error

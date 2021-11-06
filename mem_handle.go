@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/fs"
 	"sync"
+	"time"
 )
 
 type MemHandle struct {
@@ -163,4 +164,8 @@ func (h *MemHandle) Sync() error {
 
 func (h *MemHandle) Truncate(size int64) error {
 	return h.fs.changeFileByID(h.id, fileTruncate(size))
+}
+
+func (h *MemHandle) ChangeTimes(atime, mtime time.Time) error {
+	return h.fs.changeFileByID(h.id, fileChangeTimes(atime, mtime))
 }

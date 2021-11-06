@@ -9,17 +9,18 @@ import (
 )
 
 type File struct {
-	ID      FileID
-	IsDir   bool
-	Name    string
-	Size    int64
-	Mode    fs.FileMode
-	ModTime time.Time
-	Subs    *NodeSet // name -> NamedFileID
-	Symlink string
-	Content []byte
-	UserID  int
-	GroupID int
+	ID         FileID
+	IsDir      bool
+	Name       string
+	Size       int64
+	Mode       fs.FileMode
+	ModTime    time.Time
+	Subs       *NodeSet // name -> NamedFileID
+	Symlink    string
+	Content    []byte
+	UserID     int
+	GroupID    int
+	AccessTime time.Time
 }
 
 type FileID uint64
@@ -85,8 +86,9 @@ func (f File) Stat() (FileInfo, error) {
 		modTime: f.ModTime,
 		isDir:   f.IsDir,
 		ext: ExtFileInfo{
-			UserID:  f.UserID,
-			GroupID: f.GroupID,
+			UserID:     f.UserID,
+			GroupID:    f.GroupID,
+			AccessTime: f.AccessTime,
 		},
 	}, nil
 }

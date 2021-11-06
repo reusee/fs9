@@ -3,6 +3,7 @@ package fs9
 import (
 	"io"
 	"io/fs"
+	"time"
 )
 
 type Handle interface {
@@ -17,4 +18,5 @@ type Handle interface {
 	Name() string
 	Sync() error
 	Truncate(size int64) error
+	ChangeTimes(atime time.Time, mtime time.Time) error
 }

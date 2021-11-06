@@ -15,8 +15,9 @@ type FileInfo struct {
 }
 
 type ExtFileInfo struct {
-	UserID  int
-	GroupID int
+	UserID     int
+	GroupID    int
+	AccessTime time.Time
 }
 
 var _ fs.FileInfo = FileInfo{}

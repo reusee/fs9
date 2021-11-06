@@ -389,3 +389,7 @@ func (m *MemFS) ChangeOwner(name string, uid, gid int) error {
 func (m *MemFS) Truncate(name string, size int64) error {
 	return m.changeFile(name, fileTruncate(size))
 }
+
+func (m *MemFS) ChangeTimes(name string, atime, mtime time.Time) error {
+	return m.changeFile(name, fileChangeTimes(atime, mtime))
+}

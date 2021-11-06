@@ -1,6 +1,9 @@
 package fs9
 
-import "io/fs"
+import (
+	"io/fs"
+	"time"
+)
 
 func fileChangeMode(mode fs.FileMode) func(*File) error {
 	return func(file *File) error {
@@ -34,6 +37,14 @@ func fileTruncate(size int64) func(*File) error {
 			file.Content = newContent
 		}
 		file.Size = size
+		return nil
+	}
+}
+
+func fileChangeTimes(atime, mtime time.Time) func(*File) error {
+	return func(file *File) error {
+		file.AccessTime = atime
+		file.ModTime = mtime
 		return nil
 	}
 }
