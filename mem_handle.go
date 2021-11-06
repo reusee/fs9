@@ -149,22 +149,11 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 }
 
 func (h *MemHandle) ChangeMode(mode fs.FileMode) error {
-	return h.fs.changeFileByID(h.id, func(file *File) error {
-		file.Mode = mode
-		return nil
-	})
+	return h.fs.changeFileByID(h.id, fileChangeMode(mode))
 }
 
 func (h *MemHandle) ChangeOwner(uid, gid int) error {
-	return h.fs.changeFileByID(h.id, func(file *File) error {
-		if uid != -1 {
-			file.UserID = uid
-		}
-		if gid != -1 {
-			file.GroupID = gid
-		}
-		return nil
-	})
+	return h.fs.changeFileByID(h.id, fileChagneOwner(uid, gid))
 }
 
 func (h *MemHandle) Sync() error {
@@ -173,18 +162,5 @@ func (h *MemHandle) Sync() error {
 }
 
 func (h *MemHandle) Truncate(size int64) error {
-	return h.fs.changeFileByID(h.id, func(file *File) error {
-		if file.Size == size {
-			return nil
-		}
-		if size < file.Size {
-			file.Content = file.Content[:size]
-		} else {
-			newContent := make([]byte, size)
-			copy(newContent, file.Content)
-			file.Content = newContent
-		}
-		file.Size = size
-		return nil
-	})
+	return h.fs.changeFileByID(h.id, fileTruncate(size))
 }
