@@ -16,6 +16,6 @@ type Handle interface {
 	ChangeMode(mode fs.FileMode) error
 	ChangeOwner(uid, gid int) error
 	Name() string
-	//Sync() error
+	Sync() error
 	//Truncate(size int64) error
 }

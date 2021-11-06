@@ -166,3 +166,8 @@ func (h *MemHandle) ChangeOwner(uid, gid int) error {
 		return nil
 	})
 }
+
+func (h *MemHandle) Sync() error {
+	//TODO materialize
+	return nil
+}
