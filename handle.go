@@ -11,4 +11,10 @@ type Handle interface {
 	io.Seeker
 	io.Writer
 	io.ReaderAt
+
+	ChangeMode(mode fs.FileMode) error
+	ChangeOwner(uid, gid int) error
+	Name() string
+	Sync() error
+	Truncate(size int64) error
 }
