@@ -249,6 +249,7 @@ func testFS(
 
 		// read new file
 		_, err = handle3.Seek(0, 0)
+		ce(err)
 		content, err = io.ReadAll(handle3)
 		ce(err)
 		eq(
@@ -331,6 +332,7 @@ func testFS(
 		ce(err)
 
 		_, err = h1.Seek(0, 0)
+		ce(err)
 		content, err := io.ReadAll(h1)
 		ce(err)
 		eq(

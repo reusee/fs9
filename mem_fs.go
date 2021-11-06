@@ -239,6 +239,9 @@ func (m *MemFS) makeFile(
 	newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parentID), func(node Node) (Node, error) {
 		return newParentNode, nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	m.files = newMapNode.(*FileMap)
 
 	return file, nil
@@ -337,6 +340,9 @@ func (m *MemFS) Remove(p string, options ...RemoveOption) error {
 	newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parentID), func(node Node) (Node, error) {
 		return newParentNode, nil
 	})
+	if err != nil {
+		return err
+	}
 	m.files = newMapNode.(*FileMap)
 
 	return nil
