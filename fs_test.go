@@ -340,6 +340,10 @@ func testFS(
 
 	})
 
+	t.Run("parallel operations", func(t *testing.T) {
+		//TODO
+	})
+
 	t.Run("delete non-empty dir", func(t *testing.T) {
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()

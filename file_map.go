@@ -3,6 +3,7 @@ package fs9
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"strings"
 
 	"github.com/reusee/it"
@@ -10,6 +11,7 @@ import (
 
 // FileMap is sharded map of FileID to *File
 type FileMap struct {
+	nodeID   int64
 	subs     *NodeSet
 	level    int
 	shardKey uint8
@@ -19,10 +21,21 @@ var _ Node = new(FileMap)
 
 func NewFileMap(level int, shardKey uint8) *FileMap {
 	return &FileMap{
+		nodeID:   rand.Int63(),
 		subs:     it.NewNodeSet(nil),
 		level:    level,
 		shardKey: shardKey,
 	}
+}
+
+func (f *FileMap) NodeID() int64 {
+	return f.nodeID
+}
+
+func (f *FileMap) Clone() *FileMap {
+	newMap := *f
+	newMap.nodeID = rand.Int63()
+	return &newMap
 }
 
 func (f FileMap) GetPath(id FileID) (path KeyPath) {
@@ -58,11 +71,10 @@ func (f *FileMap) Mutate(
 		if err != nil { // NOCOVER
 			return nil, we(err)
 		}
-		newSubs := newNode.(*NodeSet)
-		if newSubs != f.subs {
-			newMap := *f
-			newMap.subs = newSubs
-			return &newMap, nil
+		if newNode.NodeID() != f.subs.NodeID() {
+			newMap := f.Clone()
+			newMap.subs = newNode.(*NodeSet)
+			return newMap, nil
 		}
 		return f, nil
 	}
@@ -85,11 +97,10 @@ func (f *FileMap) Mutate(
 	if err != nil { // NOCOVER
 		return nil, we(err)
 	}
-	subs = newNode.(*NodeSet)
-	if f.subs != subs {
-		newMap := *f
-		newMap.subs = subs
-		return &newMap, nil
+	if newNode.NodeID() != f.subs.NodeID() {
+		newMap := f.Clone()
+		newMap.subs = newNode.(*NodeSet)
+		return newMap, nil
 	}
 
 	return f, nil

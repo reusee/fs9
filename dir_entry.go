@@ -8,16 +8,21 @@ import (
 )
 
 type DirEntry struct {
-	id    FileID
-	name  string
-	isDir bool
-	_type fs.FileMode
-	fs    *MemFS
+	nodeID int64
+	id     FileID
+	name   string
+	isDir  bool
+	_type  fs.FileMode
+	fs     *MemFS
 }
 
 var _ fs.DirEntry = DirEntry{}
 
 var _ Node = DirEntry{}
+
+func (d DirEntry) NodeID() int64 {
+	return d.nodeID
+}
 
 func (d DirEntry) Name() string {
 	return d.name

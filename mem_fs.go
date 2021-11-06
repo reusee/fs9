@@ -38,13 +38,7 @@ func NewMemFS() *MemFS {
 	)
 
 	// root file
-	rootFile := &File{
-		ID:      FileID(rand.Int63()),
-		IsDir:   true,
-		Name:    "root",
-		Mode:    fs.ModeDir,
-		ModTime: time.Now(),
-	}
+	rootFile := NewFile("root", true)
 	newNode, err := m.files.Mutate(m.ctx, m.files.GetPath(rootFile.ID), func(node Node) (Node, error) {
 		return rootFile, nil
 	})
@@ -201,17 +195,7 @@ func (m *MemFS) makeFile(
 		}
 
 		// add new file
-		var mode fs.FileMode
-		if isDir {
-			mode |= fs.ModeDir
-		}
-		file = &File{
-			ID:      FileID(rand.Int63()),
-			IsDir:   isDir,
-			Name:    name,
-			Mode:    mode,
-			ModTime: time.Now(),
-		}
+		file = NewFile(name, isDir)
 		newNode, err := fileMap.Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
 			if node != nil {
 				panic("impossible")
@@ -224,25 +208,30 @@ func (m *MemFS) makeFile(
 		fileMap = newNode.(*FileMap)
 
 		return DirEntry{
-			id:    file.ID,
-			name:  file.Name,
-			isDir: file.IsDir,
-			_type: file.Mode & fs.ModeType,
-			fs:    m,
+			nodeID: rand.Int63(),
+			id:     file.ID,
+			name:   file.Name,
+			isDir:  file.IsDir,
+			_type:  file.Mode & fs.ModeType,
+			fs:     m,
 		}, nil
 	})
 	if err != nil {
 		return nil, we(err)
 	}
 
-	// update parent and map
-	newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parentID), func(node Node) (Node, error) {
-		return newParentNode, nil
-	})
-	if err != nil {
-		return nil, err
+	if newParentNode.NodeID() != parentFile.NodeID() {
+		// update map
+		newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parentID), func(node Node) (Node, error) {
+			return newParentNode, nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		if newMapNode.NodeID() != m.files.NodeID() {
+			m.files = newMapNode.(*FileMap)
+		}
 	}
-	m.files = newMapNode.(*FileMap)
 
 	return file, nil
 }
@@ -254,7 +243,9 @@ func (m *MemFS) updateFile(file *File) error {
 	if err != nil {
 		return err
 	}
-	m.files = newMapNode.(*FileMap)
+	if newMapNode.NodeID() != m.files.NodeID() {
+		m.files = newMapNode.(*FileMap)
+	}
 	return nil
 }
 
@@ -336,14 +327,18 @@ func (m *MemFS) Remove(p string, options ...RemoveOption) error {
 		return we(err)
 	}
 
-	// update parent and map
-	newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parentID), func(node Node) (Node, error) {
-		return newParentNode, nil
-	})
-	if err != nil {
-		return err
+	if newParentNode.NodeID() != parentFile.NodeID() {
+		// update parent and map
+		newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parentID), func(node Node) (Node, error) {
+			return newParentNode, nil
+		})
+		if err != nil {
+			return err
+		}
+		if newMapNode.NodeID() != m.files.NodeID() {
+			m.files = newMapNode.(*FileMap)
+		}
 	}
-	m.files = newMapNode.(*FileMap)
 
 	return nil
 }

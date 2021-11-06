@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math/rand"
 	"strings"
 	"time"
+
+	"github.com/reusee/it"
 )
 
 type File struct {
+	nodeID     int64
 	ID         FileID
 	IsDir      bool
 	Name       string
@@ -25,6 +29,25 @@ type File struct {
 
 type FileID uint64
 
+func NewFile(name string, isDir bool) *File {
+	var mode fs.FileMode
+	if isDir {
+		mode = fs.ModeDir
+	}
+	f := &File{
+		nodeID:  rand.Int63(),
+		ID:      FileID(rand.Int63()),
+		IsDir:   isDir,
+		Name:    name,
+		Mode:    mode,
+		ModTime: time.Now(),
+	}
+	if isDir {
+		f.Subs = it.NewNodeSet(nil)
+	}
+	return f
+}
+
 func (f *File) Clone() *File {
 	newFile := *f
 	now := time.Now()
@@ -32,10 +55,15 @@ func (f *File) Clone() *File {
 		now = now.Add(time.Nanosecond)
 	}
 	newFile.ModTime = now
+	newFile.nodeID = rand.Int63()
 	return &newFile
 }
 
 var _ Node = new(File)
+
+func (f File) NodeID() int64 {
+	return f.nodeID
+}
 
 func (f File) KeyRange() (Key, Key) {
 	return f.ID, f.ID
@@ -56,10 +84,9 @@ func (f *File) Mutate(
 	if err != nil {
 		return nil, err
 	}
-	newSubs := newNode.(*NodeSet)
-	if newSubs != f.Subs {
+	if newNode.NodeID() != f.Subs.NodeID() {
 		newFile := f.Clone()
-		newFile.Subs = newSubs
+		newFile.Subs = newNode.(*NodeSet)
 		return newFile, nil
 	}
 	return f, nil
