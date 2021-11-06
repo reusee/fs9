@@ -396,3 +396,20 @@ func (m *MemFS) ChangeOwner(name string, uid, gid int) error {
 		return nil
 	})
 }
+
+func (m *MemFS) Truncate(name string, size int64) error {
+	return m.changeFile(name, func(file *File) error {
+		if file.Size == size {
+			return nil
+		}
+		if size < file.Size {
+			file.Content = file.Content[:size]
+		} else {
+			newContent := make([]byte, size)
+			copy(newContent, file.Content)
+			file.Content = newContent
+		}
+		file.Size = size
+		return nil
+	})
+}

@@ -21,7 +21,7 @@ type FS interface {
 	Remove(path string, options ...RemoveOption) error
 	//Rename(oldpath, newpath string) error
 	//SymLink(oldname, newname string) error
-	//Truncate(name string, size int64) error
+	Truncate(name string, size int64) error
 
 	//TODO snapshot
 }

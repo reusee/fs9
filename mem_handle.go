@@ -171,3 +171,20 @@ func (h *MemHandle) Sync() error {
 	//TODO materialize
 	return nil
 }
+
+func (h *MemHandle) Truncate(size int64) error {
+	return h.fs.changeFileByID(h.id, func(file *File) error {
+		if file.Size == size {
+			return nil
+		}
+		if size < file.Size {
+			file.Content = file.Content[:size]
+		} else {
+			newContent := make([]byte, size)
+			copy(newContent, file.Content)
+			file.Content = newContent
+		}
+		file.Size = size
+		return nil
+	})
+}

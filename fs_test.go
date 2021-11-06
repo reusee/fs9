@@ -142,6 +142,32 @@ func testFS(
 				ext.GroupID, 2,
 			)
 
+			// truncate
+			ce(fs.Truncate(path, 42))
+			stat, err = iofs.Stat(fs, path)
+			ce(err)
+			eq(
+				stat.Size(), int64(42),
+			)
+			data, err := iofs.ReadFile(fs, path)
+			ce(err)
+			eq(
+				len(data), 42,
+			)
+			ce(h.Truncate(99))
+			stat, err = h.Stat()
+			ce(err)
+			eq(
+				stat.Size(), int64(99),
+			)
+			_, err = h.Seek(0, 0)
+			ce(err)
+			data, err = io.ReadAll(h)
+			ce(err)
+			eq(
+				len(data), 99,
+			)
+
 		}
 
 		ce(iofs.WalkDir(fs, ".", func(path string, entry iofs.DirEntry, err error) error {

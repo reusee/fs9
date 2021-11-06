@@ -12,10 +12,9 @@ type Handle interface {
 	io.Writer
 	io.ReaderAt
 
-	//TODO
 	ChangeMode(mode fs.FileMode) error
 	ChangeOwner(uid, gid int) error
 	Name() string
 	Sync() error
-	//Truncate(size int64) error
+	Truncate(size int64) error
 }
