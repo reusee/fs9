@@ -24,6 +24,16 @@ type File struct {
 
 type FileID uint64
 
+func (f *File) Clone() *File {
+	newFile := *f
+	now := time.Now()
+	if now.Equal(newFile.ModTime) {
+		now = now.Add(time.Nanosecond)
+	}
+	newFile.ModTime = now
+	return &newFile
+}
+
 var _ Node = new(File)
 
 func (f File) KeyRange() (Key, Key) {
@@ -47,14 +57,9 @@ func (f *File) Mutate(
 	}
 	newSubs := newNode.(*NodeSet)
 	if newSubs != f.Subs {
-		newFile := *f
+		newFile := f.Clone()
 		newFile.Subs = newSubs
-		now := time.Now()
-		if now.Equal(newFile.ModTime) {
-			now = now.Add(time.Nanosecond)
-		}
-		newFile.ModTime = now
-		return &newFile, nil
+		return newFile, nil
 	}
 	return f, nil
 }
@@ -102,7 +107,7 @@ func (f File) ReadAt(buf []byte, offset int64) (n int, err error) {
 }
 
 func (f *File) WriteAt(data []byte, offset int64) (*File, int, error) {
-	newFile := *f
+	newFile := f.Clone()
 	if l := int(offset) + len(data); l > len(f.Content) {
 		newFile.Content = make([]byte, l)
 	} else {
@@ -111,10 +116,5 @@ func (f *File) WriteAt(data []byte, offset int64) (*File, int, error) {
 	copy(newFile.Content, f.Content)
 	copy(newFile.Content[offset:], data)
 	newFile.Size = int64(len(newFile.Content))
-	now := time.Now()
-	if now.Equal(newFile.ModTime) {
-		now = now.Add(time.Nanosecond)
-	}
-	newFile.ModTime = now
-	return &newFile, len(data), nil
+	return newFile, len(data), nil
 }

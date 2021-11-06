@@ -356,11 +356,11 @@ func (m *MemFS) changeFile(name string, fn func(*File) error) error {
 	if file.Mode&fs.ModeSymlink > 0 {
 		return m.changeFile(file.Symlink, fn)
 	}
-	newFile := *file
-	if err := fn(&newFile); err != nil {
+	newFile := file.Clone()
+	if err := fn(newFile); err != nil {
 		return err
 	}
-	return m.updateFile(&newFile)
+	return m.updateFile(newFile)
 }
 
 func (m *MemFS) changeFileByID(id FileID, fn func(*File) error) error {
@@ -371,11 +371,11 @@ func (m *MemFS) changeFileByID(id FileID, fn func(*File) error) error {
 	if file.Mode&fs.ModeSymlink > 0 {
 		return m.changeFile(file.Symlink, fn)
 	}
-	newFile := *file
-	if err := fn(&newFile); err != nil {
+	newFile := file.Clone()
+	if err := fn(newFile); err != nil {
 		return err
 	}
-	return m.updateFile(&newFile)
+	return m.updateFile(newFile)
 }
 
 func (m *MemFS) ChangeMode(name string, mode fs.FileMode) error {
