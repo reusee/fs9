@@ -143,6 +143,22 @@ func (m *MemFS) GetFileIDByPath(root FileID, path []string) (FileID, error) {
 	return m.GetFileIDByPath(id, path[1:])
 }
 
+func (m *MemFS) GetFileByName(name string) (*File, error) {
+	path, err := PathToSlice(name)
+	if err != nil {
+		return nil, err
+	}
+	id, err := m.GetFileIDByPath(m.rootID, path)
+	if err != nil {
+		return nil, err
+	}
+	file, err := m.GetFileByID(id)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
 func (m *MemFS) MakeDir(p string) error {
 	parts, err := PathToSlice(p)
 	if err != nil {
@@ -323,4 +339,35 @@ func (m *MemFS) Remove(p string, options ...RemoveOption) error {
 	m.files = newMapNode.(*FileMap)
 
 	return nil
+}
+
+func (m *MemFS) changeFile(name string, fn func(*File) error) error {
+	file, err := m.GetFileByName(name)
+	if err != nil {
+		return err
+	}
+	newFile := *file
+	if err := fn(&newFile); err != nil {
+		return err
+	}
+	return m.updateFile(&newFile)
+}
+
+func (m *MemFS) changeFileByID(id FileID, fn func(*File) error) error {
+	file, err := m.GetFileByID(id)
+	if err != nil {
+		return err
+	}
+	newFile := *file
+	if err := fn(&newFile); err != nil {
+		return err
+	}
+	return m.updateFile(&newFile)
+}
+
+func (m *MemFS) ChangeMode(name string, mode fs.FileMode) error {
+	return m.changeFile(name, func(file *File) error {
+		file.Mode = mode
+		return nil
+	})
 }

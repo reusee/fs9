@@ -93,12 +93,31 @@ func testFS(
 				t.Fatalf("got %d", info.Size())
 			}
 
+			// read
 			content, err := io.ReadAll(f)
 			ce(err)
 			ce(f.Close())
 			if !bytes.Equal(content, []byte("foo")) {
 				t.Fatalf("got %s", content)
 			}
+
+			h, err = fs.OpenHandle(path)
+			ce(err)
+			defer h.Close()
+
+			// chagne mode
+			ce(fs.ChangeMode(path, 0755))
+			stat, err := iofs.Stat(fs, path)
+			ce(err)
+			eq(
+				stat.Mode()&iofs.ModePerm, iofs.FileMode(0755),
+			)
+			ce(h.ChangeMode(0644))
+			stat, err = h.Stat()
+			ce(err)
+			eq(
+				stat.Mode()&iofs.ModePerm, iofs.FileMode(0644),
+			)
 
 		}
 

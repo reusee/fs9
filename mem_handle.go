@@ -142,3 +142,10 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 		ret = append(ret, entry)
 	}
 }
+
+func (h *MemHandle) ChangeMode(mode fs.FileMode) error {
+	return h.fs.changeFileByID(h.id, func(file *File) error {
+		file.Mode = mode
+		return nil
+	})
+}
