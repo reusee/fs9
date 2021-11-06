@@ -377,3 +377,15 @@ func (m *MemFS) ChangeMode(name string, mode fs.FileMode) error {
 		return nil
 	})
 }
+
+func (m *MemFS) ChangeOwner(name string, uid, gid int) error {
+	return m.changeFile(name, func(file *File) error {
+		if uid != -1 {
+			file.UserID = uid
+		}
+		if gid != -1 {
+			file.GroupID = gid
+		}
+		return nil
+	})
+}

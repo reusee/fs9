@@ -18,6 +18,8 @@ type File struct {
 	Subs    *NodeSet // name -> NamedFileID
 	Symlink string
 	Content []byte
+	UserID  int
+	GroupID int
 }
 
 type FileID uint64
@@ -77,6 +79,10 @@ func (f File) Stat() (FileInfo, error) {
 		mode:    f.Mode,
 		modTime: f.ModTime,
 		isDir:   f.IsDir,
+		ext: ExtFileInfo{
+			UserID:  f.UserID,
+			GroupID: f.GroupID,
+		},
 	}, nil
 }
 

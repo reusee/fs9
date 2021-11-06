@@ -119,6 +119,24 @@ func testFS(
 				stat.Mode()&iofs.ModePerm, iofs.FileMode(0644),
 			)
 
+			// change owner
+			ce(fs.ChangeOwner(path, 42, 2))
+			stat, err = iofs.Stat(fs, path)
+			ce(err)
+			ext := stat.Sys().(ExtFileInfo)
+			eq(
+				ext.UserID, 42,
+				ext.GroupID, 2,
+			)
+			ce(h.ChangeOwner(42, 2))
+			stat, err = h.Stat()
+			ce(err)
+			ext = stat.Sys().(ExtFileInfo)
+			eq(
+				ext.UserID, 42,
+				ext.GroupID, 2,
+			)
+
 		}
 
 		ce(iofs.WalkDir(fs, ".", func(path string, entry iofs.DirEntry, err error) error {

@@ -149,3 +149,15 @@ func (h *MemHandle) ChangeMode(mode fs.FileMode) error {
 		return nil
 	})
 }
+
+func (h *MemHandle) ChangeOwner(uid, gid int) error {
+	return h.fs.changeFileByID(h.id, func(file *File) error {
+		if uid != -1 {
+			file.UserID = uid
+		}
+		if gid != -1 {
+			file.GroupID = gid
+		}
+		return nil
+	})
+}

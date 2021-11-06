@@ -11,6 +11,12 @@ type FileInfo struct {
 	mode    fs.FileMode
 	modTime time.Time
 	isDir   bool
+	ext     ExtFileInfo
+}
+
+type ExtFileInfo struct {
+	UserID  int
+	GroupID int
 }
 
 var _ fs.FileInfo = FileInfo{}
@@ -36,5 +42,5 @@ func (f FileInfo) IsDir() bool {
 }
 
 func (f FileInfo) Sys() any {
-	return nil
+	return f.ext
 }
