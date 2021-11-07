@@ -255,6 +255,27 @@ func testFS(
 		)
 	})
 
+	t.Run("link", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		fs := newFS()
+		f, err := fs.Create("foo")
+		ce(err)
+		_, err = f.Write([]byte("foo"))
+		ce(err)
+		ce(f.Close())
+		ce(fs.Link("foo", "bar"))
+		f, err = fs.OpenHandle("bar")
+		ce(err)
+		defer f.Close()
+		content, err := io.ReadAll(f)
+		ce(err)
+		eq(content, []byte("foo"))
+		ce(fs.Remove("foo"))
+		content, err = iofs.ReadFile(fs, "bar")
+		ce(err)
+		eq(content, []byte("foo"))
+	})
+
 	t.Run("concurrent handle", func(t *testing.T) {
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()

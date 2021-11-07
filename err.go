@@ -14,4 +14,5 @@ var (
 	ErrNodeNotFound = errors.New("node not found")
 	ErrOutOfBounds  = errors.New("out of bounds")
 	ErrTypeMismatch = errors.New("type mismatch")
+	ErrCannotLink   = errors.New("cannot link")
 )
