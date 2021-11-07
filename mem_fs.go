@@ -199,65 +199,41 @@ func (m *MemFS) ensureFile(
 	err error,
 ) {
 
-	// get parent
-	parentID, err := m.GetFileIDByPath(path[:len(path)-1])
-	if err != nil {
-		return 0, false, we(err)
-	}
-	parentFile, err := m.GetFileByID(parentID)
-	if err != nil {
-		return 0, false, we(err)
-	}
-
-	// ensure in parent file
-	fileMap := m.files
 	name := path[len(path)-1]
-	newParentNode, err := parentFile.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
-		if node != nil {
-			// existed
-			fileID = node.(DirEntry).id
-			return node, nil
-		}
-
-		// add new file
-		file := NewFile(name, isDir)
-		fileID = file.ID
-		created = true
-		newNode, err := fileMap.Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
+	if err = m.mutateDirEntry(path,
+		func(fileMap **FileMap, node Node) (Node, error) {
 			if node != nil {
-				panic("impossible")
+				// existed
+				fileID = node.(DirEntry).id
+				return node, nil
 			}
-			return file, nil
-		})
-		if err != nil {
-			return nil, we(err)
-		}
-		fileMap = newNode.(*FileMap)
 
-		return DirEntry{
-			nodeID: rand.Int63(),
-			id:     file.ID,
-			name:   file.Name,
-			isDir:  file.IsDir,
-			_type:  file.Mode & fs.ModeType,
-			fs:     m,
-		}, nil
-	})
-	if err != nil {
-		return 0, false, we(err)
-	}
+			// add new file
+			file := NewFile(name, isDir)
+			fileID = file.ID
+			created = true
+			newNode, err := (*fileMap).Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
+				if node != nil {
+					panic("impossible")
+				}
+				return file, nil
+			})
+			if err != nil {
+				return nil, we(err)
+			}
+			*fileMap = newNode.(*FileMap)
 
-	if newParentNode.NodeID() != parentFile.NodeID() {
-		// update map
-		newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parentID), func(node Node) (Node, error) {
-			return newParentNode, nil
-		})
-		if err != nil {
-			return 0, false, err
-		}
-		if newMapNode.NodeID() != m.files.NodeID() {
-			m.files = newMapNode.(*FileMap)
-		}
+			return DirEntry{
+				nodeID: rand.Int63(),
+				id:     file.ID,
+				name:   file.Name,
+				isDir:  file.IsDir,
+				_type:  file.Mode & fs.ModeType,
+				fs:     m,
+			}, nil
+		},
+	); err != nil {
+		return
 	}
 
 	return
@@ -453,6 +429,33 @@ func (m *MemFS) Link(oldname, newname string) error {
 		return err
 	}
 
+	if err := m.mutateDirEntry(path,
+		func(fileMap **FileMap, node Node) (Node, error) {
+			if node != nil {
+				// existed
+				return node, ErrFileExisted
+			}
+			return DirEntry{
+				nodeID: rand.Int63(),
+				id:     entry.id,
+				name:   path[len(path)-1],
+				isDir:  entry.isDir,
+				_type:  entry._type,
+				fs:     m,
+			}, nil
+		},
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MemFS) mutateDirEntry(
+	path []string,
+	fn func(fileMap **FileMap, node Node) (Node, error),
+) error {
+
 	parentID, err := m.GetFileIDByPath(path[:len(path)-1])
 	if err != nil {
 		return we(err)
@@ -462,31 +465,17 @@ func (m *MemFS) Link(oldname, newname string) error {
 		return we(err)
 	}
 
-	//TODO clean-up
-
-	// ensure in parent file
 	fileMap := m.files
 	name := path[len(path)-1]
 	newParentNode, err := parentFile.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
-		if node != nil {
-			// existed
-			return node, ErrFileExisted
-		}
-		return DirEntry{
-			nodeID: rand.Int63(),
-			id:     entry.id,
-			name:   name,
-			isDir:  entry.isDir,
-			_type:  entry._type,
-			fs:     m,
-		}, nil
+		newNode, err := fn(&fileMap, node)
+		return newNode, err
 	})
 	if err != nil {
 		return we(err)
 	}
 
 	if newParentNode.NodeID() != parentFile.NodeID() {
-		// update map
 		newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parentID), func(node Node) (Node, error) {
 			return newParentNode, nil
 		})
