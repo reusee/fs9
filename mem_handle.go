@@ -41,7 +41,9 @@ func (m *MemHandle) Read(buf []byte) (n int, err error) {
 	if m.closed {
 		return 0, ErrClosed
 	}
-	file, err := m.fs.GetFileByID(m.id)
+	batch, apply := m.fs.NewBatch()
+	defer apply(&err)
+	file, err := batch.GetFileByID(m.id)
 	if err != nil {
 		return 0, err
 	}
@@ -56,7 +58,9 @@ func (m *MemHandle) ReadAt(buf []byte, offset int64) (n int, err error) {
 		return 0, ErrClosed
 	}
 	m.Unlock()
-	file, err := m.fs.GetFileByID(m.id)
+	batch, apply := m.fs.NewBatch()
+	defer apply(&err)
+	file, err := batch.GetFileByID(m.id)
 	if err != nil {
 		return 0, err
 	}
@@ -70,7 +74,7 @@ func (m *MemHandle) Close() error {
 	return nil
 }
 
-func (m *MemHandle) Seek(offset int64, whence int) (int64, error) {
+func (m *MemHandle) Seek(offset int64, whence int) (n int64, err error) {
 	m.Lock()
 	defer m.Unlock()
 	if m.closed {
@@ -82,7 +86,9 @@ func (m *MemHandle) Seek(offset int64, whence int) (int64, error) {
 	case 1:
 		m.offset += offset
 	case 2:
-		file, err := m.fs.GetFileByID(m.id)
+		batch, apply := m.fs.NewBatch()
+		defer apply(&err)
+		file, err := batch.GetFileByID(m.id)
 		if err != nil {
 			return 0, err
 		}
@@ -99,7 +105,9 @@ func (m *MemHandle) Write(data []byte) (n int, err error) {
 	if m.closed {
 		return 0, ErrClosed
 	}
-	file, err := m.fs.GetFileByID(m.id)
+	batch, apply := m.fs.NewBatch()
+	defer apply(&err)
+	file, err := batch.GetFileByID(m.id)
 	if err != nil {
 		return 0, err
 	}
@@ -109,7 +117,7 @@ func (m *MemHandle) Write(data []byte) (n int, err error) {
 		return 0, err
 	}
 	m.offset += int64(n)
-	if err := m.fs.updateFile(newFile); err != nil {
+	if err := batch.updateFile(newFile); err != nil {
 		return 0, err
 	}
 	return
@@ -122,7 +130,9 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 		return nil, ErrClosed
 	}
 	if !m.iterStarted {
-		file, err := m.fs.GetFileByID(m.id)
+		batch, apply := m.fs.NewBatch()
+		defer apply(&err)
+		file, err := batch.GetFileByID(m.id)
 		if err != nil {
 			return nil, err
 		}
@@ -150,12 +160,16 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 	}
 }
 
-func (h *MemHandle) ChangeMode(mode fs.FileMode) error {
-	return h.fs.changeFileByID(h.id, true, fileChangeMode(mode))
+func (h *MemHandle) ChangeMode(mode fs.FileMode) (err error) {
+	batch, apply := h.fs.NewBatch()
+	defer apply(&err)
+	return batch.changeFileByID(h.id, true, fileChangeMode(mode))
 }
 
-func (h *MemHandle) ChangeOwner(uid, gid int) error {
-	return h.fs.changeFileByID(h.id, true, fileChagneOwner(uid, gid))
+func (h *MemHandle) ChangeOwner(uid, gid int) (err error) {
+	batch, apply := h.fs.NewBatch()
+	defer apply(&err)
+	return batch.changeFileByID(h.id, true, fileChagneOwner(uid, gid))
 }
 
 func (h *MemHandle) Sync() error {
@@ -163,10 +177,14 @@ func (h *MemHandle) Sync() error {
 	return nil
 }
 
-func (h *MemHandle) Truncate(size int64) error {
-	return h.fs.changeFileByID(h.id, true, fileTruncate(size))
+func (h *MemHandle) Truncate(size int64) (err error) {
+	batch, apply := h.fs.NewBatch()
+	defer apply(&err)
+	return batch.changeFileByID(h.id, true, fileTruncate(size))
 }
 
-func (h *MemHandle) ChangeTimes(atime, mtime time.Time) error {
-	return h.fs.changeFileByID(h.id, true, fileChangeTimes(atime, mtime))
+func (h *MemHandle) ChangeTimes(atime, mtime time.Time) (err error) {
+	batch, apply := h.fs.NewBatch()
+	defer apply(&err)
+	return batch.changeFileByID(h.id, true, fileChangeTimes(atime, mtime))
 }
