@@ -377,20 +377,32 @@ func (m *MemFS) changeFileByID(id FileID, followSymlink bool, fn func(*File) err
 	return m.updateFile(newFile)
 }
 
-func (m *MemFS) ChangeMode(name string, mode fs.FileMode) error {
-	return m.changeFile(name, true, fileChangeMode(mode))
+func (m *MemFS) ChangeMode(name string, mode fs.FileMode, options ...ChangeOption) error {
+	var spec changeSpec
+	for _, fn := range options {
+		fn(&spec)
+	}
+	return m.changeFile(name, !spec.NoFollow, fileChangeMode(mode))
 }
 
-func (m *MemFS) ChangeOwner(name string, uid, gid int) error {
-	return m.changeFile(name, true, fileChagneOwner(uid, gid))
+func (m *MemFS) ChangeOwner(name string, uid, gid int, options ...ChangeOption) error {
+	var spec changeSpec
+	for _, fn := range options {
+		fn(&spec)
+	}
+	return m.changeFile(name, !spec.NoFollow, fileChagneOwner(uid, gid))
 }
 
 func (m *MemFS) Truncate(name string, size int64) error {
 	return m.changeFile(name, true, fileTruncate(size))
 }
 
-func (m *MemFS) ChangeTimes(name string, atime, mtime time.Time) error {
-	return m.changeFile(name, true, fileChangeTimes(atime, mtime))
+func (m *MemFS) ChangeTimes(name string, atime, mtime time.Time, options ...ChangeOption) error {
+	var spec changeSpec
+	for _, fn := range options {
+		fn(&spec)
+	}
+	return m.changeFile(name, !spec.NoFollow, fileChangeTimes(atime, mtime))
 }
 
 func (m *MemFS) Create(name string) (Handle, error) {

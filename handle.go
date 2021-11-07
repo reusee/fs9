@@ -15,8 +15,8 @@ type Handle interface {
 
 	ChangeMode(mode fs.FileMode) error
 	ChangeOwner(uid, gid int) error
+	ChangeTimes(atime time.Time, mtime time.Time) error
 	Name() string
 	Sync() error
 	Truncate(size int64) error
-	ChangeTimes(atime time.Time, mtime time.Time) error
 }

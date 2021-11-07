@@ -9,12 +9,11 @@ type FS interface {
 	fs.FS
 
 	//TODO
-	ChangeMode(name string, mode fs.FileMode) error
-	ChangeOwner(name string, uid, gid int) error
-	ChangeTimes(name string, atime time.Time, mtime time.Time) error
+	ChangeMode(name string, mode fs.FileMode, options ...ChangeOption) error
+	ChangeOwner(name string, uid, gid int, options ...ChangeOption) error
+	ChangeTimes(name string, atime time.Time, mtime time.Time, options ...ChangeOption) error
 	Create(name string) (Handle, error)
 	Link(oldname, newname string) error
-	//LinkChangeOwner(name string, uid, gid int) error
 	MakeDir(path string) error
 	MakeDirAll(path string) error
 	OpenHandle(path string, options ...OpenOption) (Handle, error)
@@ -48,5 +47,17 @@ type removeSpec struct {
 func OptAll(b bool) RemoveOption {
 	return func(spec *removeSpec) {
 		spec.All = b
+	}
+}
+
+type changeSpec struct {
+	NoFollow bool
+}
+
+type ChangeOption func(*changeSpec)
+
+func OptNoFollow(b bool) ChangeOption {
+	return func(spec *changeSpec) {
+		spec.NoFollow = b
 	}
 }
