@@ -71,7 +71,7 @@ func (m *MemFS) OpenHandle(path string, options ...OpenOption) (Handle, error) {
 
 		if is(err, ErrFileNotFound) && spec.Create {
 			// try create
-			file, err := m.makeFile(parts, false)
+			file, err := m.NewFile(parts, false, false)
 			if err != nil {
 				return nil, we(err)
 			}
@@ -162,16 +162,17 @@ func (m *MemFS) MakeDir(p string) error {
 	if len(parts) == 0 {
 		return nil
 	}
-	_, err = m.makeFile(parts, true)
+	_, err = m.NewFile(parts, true, false)
 	if err != nil {
 		return we(err)
 	}
 	return nil
 }
 
-func (m *MemFS) makeFile(
+func (m *MemFS) NewFile(
 	parts []string,
 	isDir bool,
+	overwrite bool,
 ) (*File, error) {
 
 	// get parent
@@ -189,9 +190,11 @@ func (m *MemFS) makeFile(
 	name := parts[len(parts)-1]
 	var file *File
 	newParentNode, err := parentFile.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
-		if node != nil {
-			// already exists
-			return node, we(ErrFileExisted)
+		if !overwrite {
+			if node != nil {
+				// already exists
+				return node, we(ErrFileExisted)
+			}
 		}
 
 		// add new file
@@ -258,7 +261,7 @@ func (m *MemFS) MakeDirAll(p string) error {
 		return nil
 	}
 	for i := 1; i < len(parts)+1; i++ {
-		if _, err := m.makeFile(parts[:i], true); err != nil {
+		if _, err := m.NewFile(parts[:i], true, false); err != nil {
 			if is(err, ErrFileExisted) {
 				continue
 			}
