@@ -343,13 +343,15 @@ func (m *MemFS) Remove(p string, options ...RemoveOption) error {
 	return nil
 }
 
-func (m *MemFS) changeFile(name string, fn func(*File) error) error {
+func (m *MemFS) changeFile(name string, followSymlink bool, fn func(*File) error) error {
 	file, err := m.GetFileByName(name)
 	if err != nil {
 		return err
 	}
-	if file.Mode&fs.ModeSymlink > 0 {
-		return m.changeFile(file.Symlink, fn)
+	if followSymlink {
+		if file.Mode&fs.ModeSymlink > 0 {
+			return m.changeFile(file.Symlink, true, fn)
+		}
 	}
 	newFile := file.Clone()
 	if err := fn(newFile); err != nil {
@@ -358,13 +360,15 @@ func (m *MemFS) changeFile(name string, fn func(*File) error) error {
 	return m.updateFile(newFile)
 }
 
-func (m *MemFS) changeFileByID(id FileID, fn func(*File) error) error {
+func (m *MemFS) changeFileByID(id FileID, followSymlink bool, fn func(*File) error) error {
 	file, err := m.GetFileByID(id)
 	if err != nil {
 		return err
 	}
-	if file.Mode&fs.ModeSymlink > 0 {
-		return m.changeFile(file.Symlink, fn)
+	if followSymlink {
+		if file.Mode&fs.ModeSymlink > 0 {
+			return m.changeFile(file.Symlink, true, fn)
+		}
 	}
 	newFile := file.Clone()
 	if err := fn(newFile); err != nil {
@@ -374,19 +378,19 @@ func (m *MemFS) changeFileByID(id FileID, fn func(*File) error) error {
 }
 
 func (m *MemFS) ChangeMode(name string, mode fs.FileMode) error {
-	return m.changeFile(name, fileChangeMode(mode))
+	return m.changeFile(name, true, fileChangeMode(mode))
 }
 
 func (m *MemFS) ChangeOwner(name string, uid, gid int) error {
-	return m.changeFile(name, fileChagneOwner(uid, gid))
+	return m.changeFile(name, true, fileChagneOwner(uid, gid))
 }
 
 func (m *MemFS) Truncate(name string, size int64) error {
-	return m.changeFile(name, fileTruncate(size))
+	return m.changeFile(name, true, fileTruncate(size))
 }
 
 func (m *MemFS) ChangeTimes(name string, atime, mtime time.Time) error {
-	return m.changeFile(name, fileChangeTimes(atime, mtime))
+	return m.changeFile(name, true, fileChangeTimes(atime, mtime))
 }
 
 func (m *MemFS) Create(name string) (Handle, error) {
