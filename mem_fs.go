@@ -56,7 +56,7 @@ func (m *MemFS) Open(path string) (fs.File, error) {
 }
 
 func (m *MemFS) OpenHandle(name string, options ...OpenOption) (Handle, error) {
-	path, err := PathToSlice(name)
+	path, err := NameToPath(name)
 	if err != nil {
 		return nil, we(err)
 	}
@@ -143,7 +143,7 @@ func (m *MemFS) GetFileIDByPath(root FileID, path []string) (FileID, error) {
 }
 
 func (m *MemFS) GetFileByName(name string) (*File, error) {
-	path, err := PathToSlice(name)
+	path, err := NameToPath(name)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func (m *MemFS) GetFileByName(name string) (*File, error) {
 }
 
 func (m *MemFS) MakeDir(p string) error {
-	parts, err := PathToSlice(p)
+	parts, err := NameToPath(p)
 	if err != nil {
 		return we(err)
 	}
@@ -263,7 +263,7 @@ func (m *MemFS) updateFile(file *File) error {
 }
 
 func (m *MemFS) MakeDirAll(p string) error {
-	parts, err := PathToSlice(p)
+	parts, err := NameToPath(p)
 	if err != nil {
 		return we(err)
 	}
@@ -280,7 +280,7 @@ func (m *MemFS) MakeDirAll(p string) error {
 
 func (m *MemFS) Remove(p string, options ...RemoveOption) error {
 
-	parts, err := PathToSlice(p)
+	parts, err := NameToPath(p)
 	if err != nil {
 		return we(err)
 	}
@@ -400,7 +400,7 @@ func (m *MemFS) ChangeTimes(name string, atime, mtime time.Time) error {
 }
 
 func (m *MemFS) Create(name string) (Handle, error) {
-	path, err := PathToSlice(name)
+	path, err := NameToPath(name)
 	if err != nil {
 		return nil, err
 	}

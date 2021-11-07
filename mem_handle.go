@@ -17,6 +17,7 @@ type MemHandle struct {
 	closed      bool
 	iter        Src
 	iterStarted bool
+	//TODO read/write permission
 }
 
 var _ Handle = new(MemHandle)
