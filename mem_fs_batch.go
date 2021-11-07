@@ -22,10 +22,9 @@ func (m *MemFS) NewBatch() (
 		root:  m.root,
 		files: m.files,
 	}
+	getFileByID := GetFileByID(batch.GetFileByID)
 	batch.ctx = m.ctx.Fork(
-		func() GetFileByID {
-			return batch.GetFileByID
-		},
+		&getFileByID,
 	)
 	apply = func(p *error) {
 		if *p != nil {
