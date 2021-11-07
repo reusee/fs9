@@ -9,9 +9,9 @@ import (
 )
 
 type MemFS struct {
-	ctx    Scope
-	rootID FileID
-	files  *FileMap // FileID -> *File
+	ctx   Scope
+	root  *DirEntry
+	files *FileMap // FileID -> *File
 }
 
 var _ fs.FS = new(MemFS)
@@ -19,8 +19,6 @@ var _ fs.FS = new(MemFS)
 var _ FS = new(MemFS)
 
 type GetFileByID func(id FileID) (*File, error)
-
-type GetFileIDByPath func(root FileID, path []string) (FileID, error)
 
 func NewMemFS() *MemFS {
 	m := &MemFS{
@@ -31,9 +29,6 @@ func NewMemFS() *MemFS {
 	m.ctx = dscope.New(
 		func() GetFileByID {
 			return m.GetFileByID
-		},
-		func() GetFileIDByPath {
-			return m.GetFileIDByPath
 		},
 	)
 
@@ -46,7 +41,15 @@ func NewMemFS() *MemFS {
 		panic(err)
 	}
 	m.files = newNode.(*FileMap)
-	m.rootID = rootFile.ID
+	m.root = &DirEntry{}
+	m.root = &DirEntry{
+		nodeID: rand.Int63(),
+		id:     rootFile.ID,
+		name:   rootFile.Name,
+		isDir:  rootFile.IsDir,
+		_type:  rootFile.Mode,
+		fs:     m,
+	}
 
 	return m
 }
@@ -66,7 +69,7 @@ func (m *MemFS) OpenHandle(name string, options ...OpenOption) (Handle, error) {
 		option(&spec)
 	}
 
-	id, err := m.GetFileIDByPath(m.rootID, path)
+	id, err := m.GetFileIDByPath(path)
 	if err != nil {
 
 		if is(err, ErrFileNotFound) && spec.Create {
@@ -119,27 +122,38 @@ func (m *MemFS) GetFileByID(id FileID) (*File, error) {
 	return file, nil
 }
 
-func (m *MemFS) GetFileIDByPath(root FileID, path []string) (FileID, error) {
-	if len(path) == 0 {
-		return root, nil
+func (m *MemFS) GetDirEntryByPath(parent *DirEntry, path []string) (entry *DirEntry, err error) {
+	if parent == nil {
+		parent = m.root
 	}
-	file, err := m.GetFileByID(root)
+	if len(path) == 0 {
+		return parent, nil
+	}
+	file, err := m.GetFileByID(parent.id)
 	if err != nil {
-		return 0, we(err)
+		return nil, we(err)
 	}
 	name := path[0]
-	var id FileID
 	_, err = file.Subs.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
 		if node == nil {
 			return nil, we(ErrFileNotFound)
 		}
-		id = node.(DirEntry).id
+		e := node.(DirEntry)
+		entry = &e
 		return node, nil
 	})
 	if err != nil {
-		return 0, we(err)
+		return nil, we(err)
 	}
-	return m.GetFileIDByPath(id, path[1:])
+	return m.GetDirEntryByPath(entry, path[1:])
+}
+
+func (m *MemFS) GetFileIDByPath(path []string) (FileID, error) {
+	entry, err := m.GetDirEntryByPath(nil, path)
+	if err != nil {
+		return 0, err
+	}
+	return entry.id, nil
 }
 
 func (m *MemFS) GetFileByName(name string) (*File, error) {
@@ -147,7 +161,7 @@ func (m *MemFS) GetFileByName(name string) (*File, error) {
 	if err != nil {
 		return nil, err
 	}
-	id, err := m.GetFileIDByPath(m.rootID, path)
+	id, err := m.GetFileIDByPath(path)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +200,7 @@ func (m *MemFS) ensureFile(
 ) {
 
 	// get parent
-	parentID, err := m.GetFileIDByPath(m.rootID, path[:len(path)-1])
+	parentID, err := m.GetFileIDByPath(path[:len(path)-1])
 	if err != nil {
 		return 0, false, we(err)
 	}
@@ -294,7 +308,7 @@ func (m *MemFS) Remove(p string, options ...RemoveOption) error {
 	}
 
 	// get parent
-	parentID, err := m.GetFileIDByPath(m.rootID, parts[:len(parts)-1])
+	parentID, err := m.GetFileIDByPath(parts[:len(parts)-1])
 	if err != nil {
 		return we(err)
 	}
@@ -419,4 +433,18 @@ func (m *MemFS) Create(name string) (Handle, error) {
 		}
 	}
 	return handle, nil
+}
+
+func (m *MemFS) Link(oldname, newname string) error {
+	oldpath, err := NameToPath(oldname)
+	if err != nil {
+		return err
+	}
+	entry, err := m.GetDirEntryByPath(nil, oldpath)
+	if err != nil {
+		return err
+	}
+	_ = entry
+	//TODO
+	return nil
 }

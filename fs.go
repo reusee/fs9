@@ -13,7 +13,7 @@ type FS interface {
 	ChangeOwner(name string, uid, gid int) error
 	ChangeTimes(name string, atime time.Time, mtime time.Time) error
 	Create(name string) (Handle, error)
-	//Link(oldname, newname string) error
+	Link(oldname, newname string) error
 	//LinkChangeOwner(name string, uid, gid int) error
 	MakeDir(path string) error
 	MakeDirAll(path string) error
