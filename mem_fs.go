@@ -55,8 +55,8 @@ func (m *MemFS) Open(path string) (fs.File, error) {
 	return m.OpenHandle(path)
 }
 
-func (m *MemFS) OpenHandle(path string, options ...OpenOption) (Handle, error) {
-	parts, err := PathToSlice(path)
+func (m *MemFS) OpenHandle(name string, options ...OpenOption) (Handle, error) {
+	path, err := PathToSlice(name)
 	if err != nil {
 		return nil, we(err)
 	}
@@ -66,27 +66,31 @@ func (m *MemFS) OpenHandle(path string, options ...OpenOption) (Handle, error) {
 		option(&spec)
 	}
 
-	id, err := m.GetFileIDByPath(m.rootID, parts)
+	id, err := m.GetFileIDByPath(m.rootID, path)
 	if err != nil {
 
 		if is(err, ErrFileNotFound) && spec.Create {
 			// try create
-			file, err := m.NewFile(parts, false, false)
+			fileID, _, err := m.ensureFile(path, false)
 			if err != nil {
 				return nil, we(err)
 			}
-			id = file.ID
+			id = fileID
 
 		} else {
 			return nil, we(err)
 		}
 	}
 
+	return m.NewHandle(name, id), nil
+}
+
+func (m *MemFS) NewHandle(name string, id FileID) *MemHandle {
 	return &MemHandle{
-		name: path,
+		name: name,
 		fs:   m,
 		id:   id,
-	}, nil
+	}
 }
 
 func (m *MemFS) stat(id FileID) (info FileInfo, err error) {
@@ -162,43 +166,49 @@ func (m *MemFS) MakeDir(p string) error {
 	if len(parts) == 0 {
 		return nil
 	}
-	_, err = m.NewFile(parts, true, false)
+	_, created, err := m.ensureFile(parts, true)
 	if err != nil {
 		return we(err)
+	}
+	if !created {
+		return ErrFileExisted
 	}
 	return nil
 }
 
-func (m *MemFS) NewFile(
-	parts []string,
+func (m *MemFS) ensureFile(
+	path []string,
 	isDir bool,
-	overwrite bool,
-) (*File, error) {
+) (
+	fileID FileID,
+	created bool,
+	err error,
+) {
 
 	// get parent
-	parentID, err := m.GetFileIDByPath(m.rootID, parts[:len(parts)-1])
+	parentID, err := m.GetFileIDByPath(m.rootID, path[:len(path)-1])
 	if err != nil {
-		return nil, we(err)
+		return 0, false, we(err)
 	}
 	parentFile, err := m.GetFileByID(parentID)
 	if err != nil {
-		return nil, we(err)
+		return 0, false, we(err)
 	}
 
-	// add to parent file
+	// ensure in parent file
 	fileMap := m.files
-	name := parts[len(parts)-1]
-	var file *File
+	name := path[len(path)-1]
 	newParentNode, err := parentFile.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
-		if !overwrite {
-			if node != nil {
-				// already exists
-				return node, we(ErrFileExisted)
-			}
+		if node != nil {
+			// existed
+			fileID = node.(DirEntry).id
+			return node, nil
 		}
 
 		// add new file
-		file = NewFile(name, isDir)
+		file := NewFile(name, isDir)
+		fileID = file.ID
+		created = true
 		newNode, err := fileMap.Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
 			if node != nil {
 				panic("impossible")
@@ -220,7 +230,7 @@ func (m *MemFS) NewFile(
 		}, nil
 	})
 	if err != nil {
-		return nil, we(err)
+		return 0, false, we(err)
 	}
 
 	if newParentNode.NodeID() != parentFile.NodeID() {
@@ -229,14 +239,14 @@ func (m *MemFS) NewFile(
 			return newParentNode, nil
 		})
 		if err != nil {
-			return nil, err
+			return 0, false, err
 		}
 		if newMapNode.NodeID() != m.files.NodeID() {
 			m.files = newMapNode.(*FileMap)
 		}
 	}
 
-	return file, nil
+	return
 }
 
 func (m *MemFS) updateFile(file *File) error {
@@ -261,10 +271,7 @@ func (m *MemFS) MakeDirAll(p string) error {
 		return nil
 	}
 	for i := 1; i < len(parts)+1; i++ {
-		if _, err := m.NewFile(parts[:i], true, false); err != nil {
-			if is(err, ErrFileExisted) {
-				continue
-			}
+		if _, _, err := m.ensureFile(parts[:i], true); err != nil {
 			return we(err)
 		}
 	}
@@ -390,4 +397,26 @@ func (m *MemFS) Truncate(name string, size int64) error {
 
 func (m *MemFS) ChangeTimes(name string, atime, mtime time.Time) error {
 	return m.changeFile(name, fileChangeTimes(atime, mtime))
+}
+
+func (m *MemFS) Create(name string) (Handle, error) {
+	path, err := PathToSlice(name)
+	if err != nil {
+		return nil, err
+	}
+	id, created, err := m.ensureFile(path, false)
+	if err != nil {
+		return nil, err
+	}
+	handle := m.NewHandle(name, id)
+	if !created {
+		if err := handle.Truncate(0); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := handle.ChangeMode(0666); err != nil {
+			return nil, err
+		}
+	}
+	return handle, nil
 }

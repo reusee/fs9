@@ -234,6 +234,27 @@ func testFS(
 		}
 	})
 
+	t.Run("create", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		fs := newFS()
+		h, err := fs.Create("foo")
+		ce(err)
+		_, err = h.Write([]byte("foo"))
+		ce(err)
+		h2, err := fs.Create("foo")
+		ce(err)
+		stat, err := h2.Stat()
+		ce(err)
+		eq(
+			stat.Size(), int64(0),
+		)
+		stat, err = h.Stat()
+		ce(err)
+		eq(
+			stat.Size(), int64(0),
+		)
+	})
+
 	t.Run("concurrent handle", func(t *testing.T) {
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()

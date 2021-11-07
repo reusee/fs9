@@ -12,7 +12,7 @@ type FS interface {
 	ChangeMode(name string, mode fs.FileMode) error
 	ChangeOwner(name string, uid, gid int) error
 	ChangeTimes(name string, atime time.Time, mtime time.Time) error
-	//Create(name string) (Handle, error)
+	Create(name string) (Handle, error)
 	//Link(oldname, newname string) error
 	//LinkChangeOwner(name string, uid, gid int) error
 	MakeDir(path string) error
