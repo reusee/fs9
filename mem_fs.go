@@ -125,3 +125,9 @@ func (m *MemFS) stat(id FileID) (info FileInfo, err error) {
 	defer apply(&err)
 	return batch.stat(id)
 }
+
+func (m *MemFS) ReadLink(name string) (link string, err error) {
+	batch, apply := m.NewBatch()
+	defer apply(&err)
+	return batch.ReadLink(name)
+}

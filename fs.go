@@ -17,7 +17,7 @@ type FS interface {
 	MakeDir(path string) error
 	MakeDirAll(path string) error
 	OpenHandle(path string, options ...OpenOption) (Handle, error)
-	//ReadLink(name string) (string, error)
+	ReadLink(name string) (string, error)
 	Remove(path string, options ...RemoveOption) error
 	//Rename(oldpath, newpath string) error
 	SymLink(oldname, newname string) error

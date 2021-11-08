@@ -514,3 +514,11 @@ func (m *MemFSBatch) SymLink(oldname, newname string) error {
 	}
 	return nil
 }
+
+func (m *MemFSBatch) ReadLink(name string) (link string, err error) {
+	file, err := m.GetFileByName(name, false)
+	if err != nil {
+		return "", err
+	}
+	return file.Symlink, nil
+}
