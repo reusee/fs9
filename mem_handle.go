@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path"
 	"sync"
 	"time"
 )
@@ -32,7 +33,7 @@ func (m *MemHandle) Stat() (fs.FileInfo, error) {
 		return nil, ErrClosed
 	}
 	m.Unlock()
-	return m.fs.stat(m.id)
+	return m.fs.stat(path.Base(m.name), m.id)
 }
 
 func (m *MemHandle) Read(buf []byte) (n int, err error) {

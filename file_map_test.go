@@ -18,8 +18,7 @@ func TestFileMap(t *testing.T) {
 	newNode, err := m.Mutate(ctx, m.GetPath(id), func(node Node) (Node, error) {
 		eq(node == nil, true)
 		return &File{
-			ID:   id,
-			Name: "foo",
+			ID: id,
 		}, nil
 	})
 	ce(err)
@@ -30,7 +29,6 @@ func TestFileMap(t *testing.T) {
 		len(m.subs.Nodes[0].(*FileMap).subs.Nodes), 1,
 		len(m.subs.Nodes[0].(*FileMap).subs.Nodes[0].(*FileMap).subs.Nodes), 1,
 		len(m.subs.Nodes[0].(*FileMap).subs.Nodes[0].(*FileMap).subs.Nodes[0].(*FileMap).subs.Nodes), 1,
-		m.subs.Nodes[0].(*FileMap).subs.Nodes[0].(*FileMap).subs.Nodes[0].(*FileMap).subs.Nodes[0].(*File).Name, "foo",
 	)
 
 	buf := new(strings.Builder)
@@ -50,7 +48,6 @@ func TestFileMap(t *testing.T) {
 	eq(
 		m2 == m, true,
 		file != nil, true,
-		file.Name, "foo",
 	)
 
 	// delete

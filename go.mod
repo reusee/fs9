@@ -14,3 +14,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/reusee/pr v0.0.0-20211003125556-3e6e9c7537ae // indirect
 )
+
+replace (
+	github.com/reusee/it => ../it
+)

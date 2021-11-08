@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"math/rand"
 	"strings"
 )
 
@@ -37,7 +38,11 @@ func (d DirEntry) Type() fs.FileMode {
 }
 
 func (d DirEntry) Info() (fs.FileInfo, error) {
-	return d.fs.stat(d.id)
+	info, err := d.fs.stat(d.name, d.id)
+	if err != nil {
+		return nil, err
+	}
+	return info, nil
 }
 
 func (d DirEntry) KeyRange() (Key, Key) {
@@ -65,4 +70,22 @@ func (d DirEntry) Walk(cont Src) Src {
 	return func() (any, Src, error) {
 		return d, cont, nil
 	}
+}
+
+func (d DirEntry) Merge(ctx Scope, node2 Node) (Node, error) {
+	entry2, ok := node2.(DirEntry)
+	if !ok {
+		panic(fmt.Errorf("bad merge type %T", node2))
+	}
+	if entry2.nodeID == d.nodeID {
+		// not changed
+		return d, nil
+	}
+	if entry2.name != d.name {
+		panic(fmt.Errorf("cannot merge different name"))
+	}
+	// new
+	newNode := entry2
+	newNode.nodeID = rand.Int63()
+	return newNode, nil
 }

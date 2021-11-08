@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	iofs "io/fs"
 	"math/rand"
+	pathpkg "path"
 	"sort"
 	"strings"
 	"sync"
@@ -41,7 +42,6 @@ func testFS(
 
 		for i := 0; i < 1024; i++ {
 			parts := randomPath()
-			name := parts[len(parts)-1]
 			dir := strings.Join(parts[:len(parts)-1], "/")
 			path := strings.Join(parts, "/")
 			allPaths = append(allPaths, path)
@@ -63,7 +63,7 @@ func testFS(
 				if !stat.IsDir() {
 					t.Fatal()
 				}
-				if stat.Name() != parts[i-1] {
+				if stat.Name() != pathpkg.Base(dir) {
 					t.Fatal()
 				}
 				if stat.Mode()&iofs.ModeDir == 0 {
@@ -88,7 +88,7 @@ func testFS(
 			ce(err)
 			info, err := f.Stat()
 			ce(err)
-			if info.Name() != name {
+			if info.Name() != pathpkg.Base(path) {
 				t.Fatal()
 			}
 			if info.Size() != 3 {

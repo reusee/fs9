@@ -31,7 +31,7 @@ func NewMemFS() *MemFS {
 	m.ctx = dscope.New()
 
 	// root file
-	rootFile := NewFile("root", true)
+	rootFile := NewFile(true)
 	newNode, err := m.files.Mutate(m.ctx, m.files.GetPath(rootFile.ID), func(node Node) (Node, error) {
 		return rootFile, nil
 	})
@@ -43,7 +43,7 @@ func NewMemFS() *MemFS {
 	m.root = &DirEntry{
 		nodeID: rand.Int63(),
 		id:     rootFile.ID,
-		name:   rootFile.Name,
+		name:   ".",
 		isDir:  rootFile.IsDir,
 		_type:  rootFile.Mode,
 		fs:     m,
@@ -122,10 +122,10 @@ func (m *MemFS) SymLink(oldname, newname string) (err error) {
 	return batch.SymLink(oldname, newname)
 }
 
-func (m *MemFS) stat(id FileID) (info FileInfo, err error) {
+func (m *MemFS) stat(name string, id FileID) (info FileInfo, err error) {
 	batch, apply := m.NewBatch()
 	defer apply(&err)
-	return batch.stat(id)
+	return batch.stat(name, id)
 }
 
 func (m *MemFS) ReadLink(name string) (link string, err error) {

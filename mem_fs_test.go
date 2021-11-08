@@ -25,7 +25,7 @@ func TestMemFS2(t *testing.T) {
 	stat, err := root.Stat()
 	ce(err)
 	eq(
-		stat.Name(), "root",
+		stat.Name(), ".",
 		stat.Size(), int64(0),
 		stat.Mode()&fs.ModeDir, fs.ModeDir,
 		!stat.ModTime().IsZero(), true,

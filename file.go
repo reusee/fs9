@@ -15,7 +15,6 @@ type File struct {
 	nodeID     int64
 	ID         FileID
 	IsDir      bool
-	Name       string
 	Size       int64
 	Mode       fs.FileMode
 	ModTime    time.Time
@@ -39,7 +38,7 @@ func (f FileID) Cmp(i any) int {
 	return 0
 }
 
-func NewFile(name string, isDir bool) *File {
+func NewFile(isDir bool) *File {
 	var mode fs.FileMode
 	if isDir {
 		mode = fs.ModeDir
@@ -48,7 +47,6 @@ func NewFile(name string, isDir bool) *File {
 		nodeID:  rand.Int63(),
 		ID:      FileID(rand.Int63()),
 		IsDir:   isDir,
-		Name:    name,
 		Mode:    mode,
 		ModTime: time.Now(),
 	}
@@ -117,7 +115,6 @@ func (f *File) Walk(cont Src) Src {
 
 func (f File) Stat() (FileInfo, error) {
 	return FileInfo{
-		name:    f.Name,
 		size:    f.Size,
 		mode:    f.Mode,
 		modTime: f.ModTime,
@@ -156,4 +153,28 @@ func (f *File) WriteAt(data []byte, offset int64) (*File, int, error) {
 	copy(newFile.Content[offset:], data)
 	newFile.Size = int64(len(newFile.Content))
 	return newFile, len(data), nil
+}
+
+func (f *File) Merge(ctx Scope, node2 Node) (Node, error) {
+	file2, ok := node2.(*File)
+	if !ok {
+		panic(fmt.Errorf("bad merge type: %T", node2))
+	}
+	if node2.NodeID() == f.NodeID() {
+		// not changed
+		return f, nil
+	}
+	if file2.ID != f.ID {
+		panic(fmt.Errorf("cannot mrege different id"))
+	}
+	// new
+	newFile := file2
+	newFile.nodeID = rand.Int63()
+	newSubsNode, err := f.Subs.Merge(ctx, file2.Subs)
+	if err != nil {
+		return nil, err
+	}
+	newFile.Subs = newSubsNode.(*NodeSet)
+	//TODO merge content
+	return newFile, nil
 }

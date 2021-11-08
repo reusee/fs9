@@ -114,3 +114,26 @@ func (f FileMap) Dump(w io.Writer, level int) {
 func (f FileMap) Walk(cont Src) Src {
 	return f.subs.Walk(cont)
 }
+
+func (f *FileMap) Merge(ctx Scope, node2 Node) (Node, error) {
+	map2, ok := node2.(*FileMap)
+	if !ok {
+		panic(fmt.Errorf("bad merge type %T", node2))
+	}
+	if map2.NodeID() == f.NodeID() {
+		// not chnaged
+		return f, nil
+	}
+	if map2.level != f.level || map2.shardKey != f.shardKey {
+		panic(fmt.Errorf("cannot merge"))
+	}
+	// new
+	newMap := map2
+	newMap.nodeID = rand.Int63()
+	newSubsNode, err := f.subs.Merge(ctx, map2.subs)
+	if err != nil {
+		return nil, err
+	}
+	newMap.subs = newSubsNode.(*NodeSet)
+	return newMap, nil
+}

@@ -37,13 +37,20 @@ func (m *MemFS) NewBatch() (
 		}
 		m.Lock()
 		defer m.Unlock()
-		if batch.files.NodeID() != m.files.NodeID() {
-			if m.files.NodeID() == id0 {
-				m.files = batch.files
-			} else {
-				//TODO merge
-				panic("fixme")
-			}
+		if batch.files.NodeID() == m.files.NodeID() {
+			return
+		}
+		if m.files.NodeID() == id0 {
+			m.files = batch.files
+			return
+		}
+		newNode, err := m.files.Merge(batch.ctx, batch.files)
+		if err != nil {
+			*p = err
+			return
+		}
+		if newNode.NodeID() != m.files.NodeID() {
+			m.files = newNode.(*FileMap)
 		}
 	}
 
@@ -235,13 +242,14 @@ func (m *MemFSBatch) Link(oldname, newname string) error {
 	return nil
 }
 
-func (m *MemFSBatch) stat(id FileID) (info FileInfo, err error) {
+func (m *MemFSBatch) stat(name string, id FileID) (info FileInfo, err error) {
 	var file *File
 	file, err = m.GetFileByID(id)
 	if err != nil {
 		return
 	}
 	info, err = file.Stat()
+	info.name = name
 	return
 }
 
@@ -263,8 +271,7 @@ func (m *MemFSBatch) ensureFile(
 			}
 
 			// add new file
-			name := path[len(path)-1]
-			file := NewFile(name, isDir)
+			file := NewFile(isDir)
 			fileID = file.ID
 			created = true
 			newNode, err := m.files.Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
@@ -280,10 +287,11 @@ func (m *MemFSBatch) ensureFile(
 				m.files = newNode.(*FileMap)
 			}
 
+			name := path[len(path)-1]
 			return DirEntry{
 				nodeID: rand.Int63(),
 				id:     file.ID,
-				name:   file.Name,
+				name:   name,
 				isDir:  file.IsDir,
 				_type:  file.Mode & fs.ModeType,
 				fs:     m.fs,
@@ -496,8 +504,7 @@ func (m *MemFSBatch) SymLink(oldname, newname string) error {
 				return node, ErrFileExisted
 			}
 
-			name := path[len(path)-1]
-			file := NewFile(name, false)
+			file := NewFile(false)
 			file.Mode = file.Mode | fs.ModeSymlink
 			file.Symlink = oldname
 			newNode, err := m.files.Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
@@ -513,10 +520,11 @@ func (m *MemFSBatch) SymLink(oldname, newname string) error {
 				m.files = newNode.(*FileMap)
 			}
 
+			name := path[len(path)-1]
 			return DirEntry{
 				nodeID: rand.Int63(),
 				id:     file.ID,
-				name:   file.Name,
+				name:   name,
 				isDir:  file.IsDir,
 				_type:  file.Mode & fs.ModeType,
 				fs:     m.fs,
