@@ -418,6 +418,7 @@ func testFS(
 	})
 
 	t.Run("parallel operations", func(t *testing.T) {
+		t.Skip() //TODO
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()
 		wg := new(sync.WaitGroup)

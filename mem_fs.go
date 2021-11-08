@@ -3,12 +3,14 @@ package fs9
 import (
 	"io/fs"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/reusee/dscope"
 )
 
 type MemFS struct {
+	sync.Mutex
 	ctx   Scope
 	root  *DirEntry
 	files *FileMap // FileID -> *File

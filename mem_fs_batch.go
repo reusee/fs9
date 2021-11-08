@@ -17,6 +17,9 @@ func (m *MemFS) NewBatch() (
 	batch *MemFSBatch,
 	apply func(*error),
 ) {
+
+	m.Lock()
+	id0 := m.files.NodeID()
 	batch = &MemFSBatch{
 		fs:    m,
 		root:  m.root,
@@ -26,14 +29,24 @@ func (m *MemFS) NewBatch() (
 	batch.ctx = m.ctx.Fork(
 		&getFileByID,
 	)
+	m.Unlock()
+
 	apply = func(p *error) {
 		if *p != nil {
 			return
 		}
+		m.Lock()
+		defer m.Unlock()
 		if batch.files.NodeID() != m.files.NodeID() {
-			m.files = batch.files
+			if m.files.NodeID() == id0 {
+				m.files = batch.files
+			} else {
+				//TODO merge
+				panic("fixme")
+			}
 		}
 	}
+
 	return
 }
 
