@@ -69,7 +69,7 @@ func (m *MemFSBatch) OpenHandle(name string, options ...OpenOption) (handle Hand
 
 func (m *MemFSBatch) mutateDirEntry(
 	path []string,
-	fn func(fileMap **FileMap, node Node) (Node, error),
+	fn func(node Node) (Node, error),
 ) error {
 
 	parentID, err := m.GetFileIDByPath(path[:len(path)-1])
@@ -81,10 +81,9 @@ func (m *MemFSBatch) mutateDirEntry(
 		return we(err)
 	}
 
-	fileMap := m.files
 	name := path[len(path)-1]
 	newParentNode, err := parentFile.Mutate(m.ctx, KeyPath{name}, func(node Node) (Node, error) {
-		newNode, err := fn(&fileMap, node)
+		newNode, err := fn(node)
 		return newNode, err
 	})
 	if err != nil {
@@ -92,7 +91,7 @@ func (m *MemFSBatch) mutateDirEntry(
 	}
 
 	if newParentNode.NodeID() != parentFile.NodeID() {
-		newMapNode, err := fileMap.Mutate(m.ctx, fileMap.GetPath(parentID), func(node Node) (Node, error) {
+		newMapNode, err := m.files.Mutate(m.ctx, m.files.GetPath(parentID), func(node Node) (Node, error) {
 			return newParentNode, nil
 		})
 		if err != nil {
@@ -191,7 +190,7 @@ func (m *MemFSBatch) Link(oldname, newname string) error {
 	}
 
 	if err := m.mutateDirEntry(path,
-		func(fileMap **FileMap, node Node) (Node, error) {
+		func(node Node) (Node, error) {
 			if node != nil {
 				// existed
 				return node, ErrFileExisted
@@ -233,7 +232,7 @@ func (m *MemFSBatch) ensureFile(
 
 	name := path[len(path)-1]
 	if err = m.mutateDirEntry(path,
-		func(fileMap **FileMap, node Node) (Node, error) {
+		func(node Node) (Node, error) {
 			if node != nil {
 				// existed
 				fileID = node.(DirEntry).id
@@ -244,7 +243,7 @@ func (m *MemFSBatch) ensureFile(
 			file := NewFile(name, isDir)
 			fileID = file.ID
 			created = true
-			newNode, err := (*fileMap).Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
+			newNode, err := m.files.Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
 				if node != nil {
 					panic("impossible")
 				}
@@ -253,7 +252,9 @@ func (m *MemFSBatch) ensureFile(
 			if err != nil {
 				return nil, we(err)
 			}
-			*fileMap = newNode.(*FileMap)
+			if newNode.NodeID() != m.files.NodeID() {
+				m.files = newNode.(*FileMap)
+			}
 
 			return DirEntry{
 				nodeID: rand.Int63(),
@@ -321,7 +322,7 @@ func (m *MemFSBatch) Remove(name string, options ...RemoveOption) error {
 	}
 
 	if err := m.mutateDirEntry(path,
-		func(fileMap **FileMap, node Node) (Node, error) {
+		func(node Node) (Node, error) {
 			if node == nil {
 				return nil, we(ErrFileNotFound)
 			}
