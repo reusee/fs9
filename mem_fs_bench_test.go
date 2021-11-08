@@ -10,7 +10,7 @@ func BenchmarkMemFSWrite(b *testing.B) {
 	f, err := fs.OpenHandle("foo", OptCreate(true))
 	ce(err)
 	defer f.Close()
-	bs := bytes.Repeat([]byte("a"), 4096)
+	bs := bytes.Repeat([]byte("a"), 1*1024*1024)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := f.Seek(0, 0)
