@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -310,7 +311,7 @@ func testFS(
 		ce(err)
 	})
 
-	t.Run("concurrent handle", func(t *testing.T) {
+	t.Run("handle", func(t *testing.T) {
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()
 
@@ -417,7 +418,27 @@ func testFS(
 	})
 
 	t.Run("parallel operations", func(t *testing.T) {
-		//TODO
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		fs := newFS()
+		wg := new(sync.WaitGroup)
+		for i := 0; i < 1024; i++ {
+			wg.Add(1)
+			i := i
+			go func() {
+				defer wg.Done()
+				name := fmt.Sprintf("%d", i)
+				h, err := fs.Create(name)
+				ce(err)
+				defer h.Close()
+				data := []byte(fmt.Sprintf("%d", i))
+				_, err = h.Write(data)
+				ce(err)
+				content, err := iofs.ReadFile(fs, name)
+				ce(err)
+				eq(content, data)
+			}()
+		}
+		wg.Wait()
 	})
 
 	t.Run("delete non-empty dir", func(t *testing.T) {
