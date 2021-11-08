@@ -1,7 +1,0 @@
-go 1.18
-
-directory (
-  . // github.com/reusee/fs9
-  ../it // github.com/reusee/it
-)
-
