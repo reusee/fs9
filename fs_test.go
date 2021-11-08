@@ -276,6 +276,24 @@ func testFS(
 		eq(content, []byte("foo"))
 	})
 
+	t.Run("symlink", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		fs := newFS()
+		f, err := fs.Create("foo")
+		ce(err)
+		_, err = f.Write([]byte("foo"))
+		ce(err)
+		ce(f.Close())
+		ce(fs.SymLink("foo", "bar"))
+		content, err := iofs.ReadFile(fs, "bar")
+		ce(err)
+		eq(content, []byte("foo"))
+		ce(fs.Remove("bar"))
+		content, err = iofs.ReadFile(fs, "foo")
+		ce(err)
+		eq(content, []byte("foo"))
+	})
+
 	t.Run("concurrent handle", func(t *testing.T) {
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()

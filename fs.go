@@ -20,7 +20,7 @@ type FS interface {
 	//ReadLink(name string) (string, error)
 	Remove(path string, options ...RemoveOption) error
 	//Rename(oldpath, newpath string) error
-	//SymLink(oldname, newname string) error
+	SymLink(oldname, newname string) error
 	Truncate(name string, size int64) error
 
 	//TODO snapshot

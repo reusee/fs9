@@ -114,6 +114,12 @@ func (m *MemFS) Link(oldname, newname string) (err error) {
 	return batch.Link(oldname, newname)
 }
 
+func (m *MemFS) SymLink(oldname, newname string) (err error) {
+	batch, apply := m.NewBatch()
+	defer apply(&err)
+	return batch.SymLink(oldname, newname)
+}
+
 func (m *MemFS) stat(id FileID) (info FileInfo, err error) {
 	batch, apply := m.NewBatch()
 	defer apply(&err)

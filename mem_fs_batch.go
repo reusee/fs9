@@ -48,7 +48,7 @@ func (m *MemFSBatch) OpenHandle(name string, options ...OpenOption) (handle Hand
 		option(&spec)
 	}
 
-	id, err := m.GetFileIDByPath(path)
+	id, err := m.GetFileIDByPath(path, true)
 	if err != nil {
 
 		if is(err, ErrFileNotFound) && spec.Create {
@@ -72,7 +72,7 @@ func (m *MemFSBatch) mutateDirEntry(
 	fn func(node Node) (Node, error),
 ) error {
 
-	parentID, err := m.GetFileIDByPath(path[:len(path)-1])
+	parentID, err := m.GetFileIDByPath(path[:len(path)-1], false)
 	if err != nil {
 		return we(err)
 	}
@@ -105,15 +105,15 @@ func (m *MemFSBatch) mutateDirEntry(
 	return nil
 }
 
-func (m *MemFSBatch) GetFileIDByPath(path []string) (FileID, error) {
-	entry, err := m.GetDirEntryByPath(nil, path)
+func (m *MemFSBatch) GetFileIDByPath(path []string, followSymlink bool) (FileID, error) {
+	entry, err := m.GetDirEntryByPath(nil, path, followSymlink)
 	if err != nil {
 		return 0, err
 	}
 	return entry.id, nil
 }
 
-func (m *MemFSBatch) GetDirEntryByPath(parent *DirEntry, path []string) (entry *DirEntry, err error) {
+func (m *MemFSBatch) GetDirEntryByPath(parent *DirEntry, path []string, followSymlink bool) (entry *DirEntry, err error) {
 	if parent == nil {
 		parent = m.root
 	}
@@ -136,7 +136,18 @@ func (m *MemFSBatch) GetDirEntryByPath(parent *DirEntry, path []string) (entry *
 	if err != nil {
 		return nil, we(err)
 	}
-	return m.GetDirEntryByPath(entry, path[1:])
+	if followSymlink && entry._type&fs.ModeSymlink > 0 {
+		file, err := m.GetFileByID(entry.id)
+		if err != nil {
+			return nil, err
+		}
+		path, err := NameToPath(file.Symlink)
+		if err != nil {
+			return nil, err
+		}
+		return m.GetDirEntryByPath(nil, path, followSymlink)
+	}
+	return m.GetDirEntryByPath(entry, path[1:], followSymlink)
 }
 
 func (m *MemFSBatch) GetFileByID(id FileID) (*File, error) {
@@ -155,12 +166,12 @@ func (m *MemFSBatch) GetFileByID(id FileID) (*File, error) {
 	return file, nil
 }
 
-func (m *MemFSBatch) GetFileByName(name string) (*File, error) {
+func (m *MemFSBatch) GetFileByName(name string, followSymlink bool) (*File, error) {
 	path, err := NameToPath(name)
 	if err != nil {
 		return nil, err
 	}
-	id, err := m.GetFileIDByPath(path)
+	id, err := m.GetFileIDByPath(path, followSymlink)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +187,7 @@ func (m *MemFSBatch) Link(oldname, newname string) error {
 	if err != nil {
 		return err
 	}
-	entry, err := m.GetDirEntryByPath(nil, oldpath)
+	entry, err := m.GetDirEntryByPath(nil, oldpath, true)
 	if err != nil {
 		return err
 	}
@@ -230,7 +241,6 @@ func (m *MemFSBatch) ensureFile(
 	err error,
 ) {
 
-	name := path[len(path)-1]
 	if err = m.mutateDirEntry(path,
 		func(node Node) (Node, error) {
 			if node != nil {
@@ -240,6 +250,7 @@ func (m *MemFSBatch) ensureFile(
 			}
 
 			// add new file
+			name := path[len(path)-1]
 			file := NewFile(name, isDir)
 			fileID = file.ID
 			created = true
@@ -357,7 +368,7 @@ func (m *MemFSBatch) Remove(name string, options ...RemoveOption) error {
 }
 
 func (m *MemFSBatch) changeFile(name string, followSymlink bool, fn func(*File) error) error {
-	file, err := m.GetFileByName(name)
+	file, err := m.GetFileByName(name, followSymlink)
 	if err != nil {
 		return err
 	}
@@ -458,4 +469,48 @@ func (m *MemFSBatch) NewHandle(name string, id FileID) *MemHandle {
 		fs:   m.fs,
 		id:   id,
 	}
+}
+
+func (m *MemFSBatch) SymLink(oldname, newname string) error {
+	path, err := NameToPath(newname)
+	if err != nil {
+		return err
+	}
+	if err := m.mutateDirEntry(path,
+		func(node Node) (Node, error) {
+			if node != nil {
+				// existed
+				return node, ErrFileExisted
+			}
+
+			name := path[len(path)-1]
+			file := NewFile(name, false)
+			file.Mode = file.Mode | fs.ModeSymlink
+			file.Symlink = oldname
+			newNode, err := m.files.Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
+				if node != nil {
+					panic("impossible")
+				}
+				return file, nil
+			})
+			if err != nil {
+				return nil, err
+			}
+			if newNode.NodeID() != m.files.NodeID() {
+				m.files = newNode.(*FileMap)
+			}
+
+			return DirEntry{
+				nodeID: rand.Int63(),
+				id:     file.ID,
+				name:   file.Name,
+				isDir:  file.IsDir,
+				_type:  file.Mode & fs.ModeType,
+				fs:     m.fs,
+			}, nil
+		},
+	); err != nil {
+		return err
+	}
+	return nil
 }
