@@ -174,7 +174,9 @@ func (f *File) Merge(ctx Scope, node2 Node) (Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	newFile.Subs = newSubsNode.(*NodeSet)
+	if newSubsNode != nil {
+		newFile.Subs = newSubsNode.(*NodeSet)
+	}
 	//TODO merge content
 	return newFile, nil
 }

@@ -134,6 +134,8 @@ func (f *FileMap) Merge(ctx Scope, node2 Node) (Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	newMap.subs = newSubsNode.(*NodeSet)
+	if newSubsNode != nil {
+		newMap.subs = newSubsNode.(*NodeSet)
+	}
 	return newMap, nil
 }

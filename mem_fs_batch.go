@@ -176,6 +176,9 @@ func (m *MemFSBatch) GetFileByID(id FileID) (*File, error) {
 		m.ctx,
 		m.files.GetPath(id),
 		func(node Node) (Node, error) {
+			if node == nil {
+				return nil, ErrFileNotFound
+			}
 			file = node.(*File)
 			return node, nil
 		},
