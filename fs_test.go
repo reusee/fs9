@@ -297,6 +297,19 @@ func testFS(
 		eq(content, []byte("foo"))
 	})
 
+	t.Run("rename", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		fs := newFS()
+		f, err := fs.Create("foo")
+		ce(err)
+		ce(f.Close())
+		ce(fs.Rename("foo", "bar"))
+		_, err = fs.Open("foo")
+		eq(is(err, ErrFileNotFound), true)
+		_, err = fs.Open("bar")
+		ce(err)
+	})
+
 	t.Run("concurrent handle", func(t *testing.T) {
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()

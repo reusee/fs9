@@ -131,3 +131,8 @@ func (m *MemFS) ReadLink(name string) (link string, err error) {
 	defer apply(&err)
 	return batch.ReadLink(name)
 }
+func (m *MemFS) Rename(oldname, newname string) (err error) {
+	batch, apply := m.NewBatch()
+	defer apply(&err)
+	return batch.Rename(oldname, newname)
+}

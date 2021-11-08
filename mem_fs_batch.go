@@ -522,3 +522,48 @@ func (m *MemFSBatch) ReadLink(name string) (link string, err error) {
 	}
 	return file.Symlink, nil
 }
+
+func (m *MemFSBatch) Rename(oldname string, newname string) error {
+	oldpath, err := NameToPath(oldname)
+	if err != nil {
+		return err
+	}
+
+	entry, err := m.GetDirEntryByPath(nil, oldpath, true)
+	if err != nil {
+		return err
+	}
+
+	path, err := NameToPath(oldname)
+	if err != nil {
+		return err
+	}
+	if err := m.mutateDirEntry(path,
+		func(node Node) (Node, error) {
+			if node == nil {
+				return nil, ErrFileNotFound
+			}
+			return nil, nil
+		},
+	); err != nil {
+		return err
+	}
+
+	path, err = NameToPath(newname)
+	if err != nil {
+		return err
+	}
+	if err := m.mutateDirEntry(path,
+		func(node Node) (Node, error) {
+			if node != nil {
+				return node, ErrFileExisted
+			}
+			entry.name = path[len(path)-1]
+			return entry, nil
+		},
+	); err != nil {
+		return err
+	}
+
+	return nil
+}

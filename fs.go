@@ -8,7 +8,6 @@ import (
 type FS interface {
 	fs.FS
 
-	//TODO
 	ChangeMode(name string, mode fs.FileMode, options ...ChangeOption) error
 	ChangeOwner(name string, uid, gid int, options ...ChangeOption) error
 	ChangeTimes(name string, atime time.Time, mtime time.Time, options ...ChangeOption) error
@@ -19,7 +18,7 @@ type FS interface {
 	OpenHandle(path string, options ...OpenOption) (Handle, error)
 	ReadLink(name string) (string, error)
 	Remove(path string, options ...RemoveOption) error
-	//Rename(oldpath, newpath string) error
+	Rename(oldpath, newpath string) error
 	SymLink(oldname, newname string) error
 	Truncate(name string, size int64) error
 
