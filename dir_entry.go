@@ -9,7 +9,6 @@ import (
 	"github.com/reusee/it"
 )
 
-//TODO CRDT
 type DirEntry struct {
 	nodeID int64
 	id     FileID

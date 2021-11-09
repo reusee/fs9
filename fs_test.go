@@ -418,7 +418,6 @@ func testFS(
 	})
 
 	t.Run("parallel operations", func(t *testing.T) {
-		t.Skip() //TODO
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()
 
@@ -446,19 +445,16 @@ func testFS(
 				stat, err := iofs.Stat(fs, name)
 				ce(err)
 				ext := stat.Sys().(ExtFileInfo)
-				pt("-> %+v\n", stat)
 				eq(
 					stat.Name(), name,
 					ext.UserID, 42,
 					ext.GroupID, 24,
-				//TODO
-				//stat.Size(), int64(len(data)),
+					stat.Size(), int64(len(data)),
 				)
 
-				//TODO
-				//content, err := iofs.ReadFile(fs, name)
-				//ce(err)
-				//eq(content, data)
+				content, err := iofs.ReadFile(fs, name)
+				ce(err)
+				eq(content, data)
 			}()
 		}
 		wg.Wait()

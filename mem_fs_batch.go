@@ -7,21 +7,24 @@ import (
 	"github.com/reusee/it"
 )
 
-type MemFSBatch struct {
+type MemFSReadBatch struct {
 	fs    *MemFS
 	ctx   Scope
 	root  *DirEntry
 	files *FileMap
 }
 
-func (m *MemFS) NewBatch() (
-	batch *MemFSBatch,
-	apply func(*error),
+type MemFSWriteBatch struct {
+	MemFSReadBatch
+}
+
+func (m *MemFS) NewReadBatch() (
+	batch *MemFSReadBatch,
+	done func(*error),
 ) {
 
-	m.Lock()
-	id0 := m.files.NodeID()
-	batch = &MemFSBatch{
+	m.RLock()
+	batch = &MemFSReadBatch{
 		fs:    m,
 		root:  m.root,
 		files: m.files,
@@ -30,35 +33,49 @@ func (m *MemFS) NewBatch() (
 	batch.ctx = m.ctx.Fork(
 		&getFileByID,
 	)
-	m.Unlock()
 
-	apply = func(p *error) {
-		if *p != nil {
-			return
-		}
-		m.Lock()
-		defer m.Unlock()
-		if batch.files.NodeID() == m.files.NodeID() {
-			return
-		}
-		if m.files.NodeID() == id0 {
-			m.files = batch.files
-			return
-		}
-		newNode, err := m.files.Merge(batch.ctx, batch.files)
-		if err != nil {
-			*p = err
-			return
-		}
-		if newNode.NodeID() != m.files.NodeID() {
-			m.files = newNode.(*FileMap)
+	done = func(p *error) {
+		defer m.RUnlock()
+		if batch.files.NodeID() != m.files.NodeID() {
+			panic("should not mutate")
 		}
 	}
 
 	return
 }
 
-func (m *MemFSBatch) OpenHandle(name string, options ...OpenOption) (handle Handle, err error) {
+func (m *MemFS) NewWriteBatch() (
+	batch *MemFSWriteBatch,
+	apply func(*error),
+) {
+
+	m.Lock()
+	batch = &MemFSWriteBatch{
+		MemFSReadBatch: MemFSReadBatch{
+			fs:    m,
+			root:  m.root,
+			files: m.files,
+		},
+	}
+	getFileByID := GetFileByID(batch.GetFileByID)
+	batch.ctx = m.ctx.Fork(
+		&getFileByID,
+	)
+
+	apply = func(p *error) {
+		defer m.Unlock()
+		if *p != nil {
+			return
+		}
+		if batch.files.NodeID() != m.files.NodeID() {
+			m.files = batch.files
+		}
+	}
+
+	return
+}
+
+func (m *MemFSWriteBatch) OpenHandle(name string, options ...OpenOption) (handle Handle, err error) {
 	path, err := NameToPath(name)
 	if err != nil {
 		return nil, we(err)
@@ -88,7 +105,7 @@ func (m *MemFSBatch) OpenHandle(name string, options ...OpenOption) (handle Hand
 	return m.NewHandle(name, id), nil
 }
 
-func (m *MemFSBatch) mutateDirEntry(
+func (m *MemFSWriteBatch) mutateDirEntry(
 	path []string,
 	fn func(node Node) (Node, error),
 ) error {
@@ -126,7 +143,7 @@ func (m *MemFSBatch) mutateDirEntry(
 	return nil
 }
 
-func (m *MemFSBatch) GetFileIDByPath(path []string, followSymlink bool) (FileID, error) {
+func (m *MemFSReadBatch) GetFileIDByPath(path []string, followSymlink bool) (FileID, error) {
 	entry, err := m.GetDirEntryByPath(nil, path, followSymlink)
 	if err != nil {
 		return 0, err
@@ -134,7 +151,7 @@ func (m *MemFSBatch) GetFileIDByPath(path []string, followSymlink bool) (FileID,
 	return entry.id, nil
 }
 
-func (m *MemFSBatch) GetDirEntryByPath(parent *DirEntry, path []string, followSymlink bool) (entry *DirEntry, err error) {
+func (m *MemFSReadBatch) GetDirEntryByPath(parent *DirEntry, path []string, followSymlink bool) (entry *DirEntry, err error) {
 	if parent == nil {
 		parent = m.root
 	}
@@ -171,7 +188,7 @@ func (m *MemFSBatch) GetDirEntryByPath(parent *DirEntry, path []string, followSy
 	return m.GetDirEntryByPath(entry, path[1:], followSymlink)
 }
 
-func (m *MemFSBatch) GetFileByID(id FileID) (*File, error) {
+func (m *MemFSReadBatch) GetFileByID(id FileID) (*File, error) {
 	var file *File
 	_, err := m.files.Mutate(
 		m.ctx,
@@ -190,7 +207,7 @@ func (m *MemFSBatch) GetFileByID(id FileID) (*File, error) {
 	return file, nil
 }
 
-func (m *MemFSBatch) GetFileByName(name string, followSymlink bool) (*File, error) {
+func (m *MemFSReadBatch) GetFileByName(name string, followSymlink bool) (*File, error) {
 	path, err := NameToPath(name)
 	if err != nil {
 		return nil, err
@@ -206,7 +223,7 @@ func (m *MemFSBatch) GetFileByName(name string, followSymlink bool) (*File, erro
 	return file, nil
 }
 
-func (m *MemFSBatch) Link(oldname, newname string) error {
+func (m *MemFSWriteBatch) Link(oldname, newname string) error {
 	oldpath, err := NameToPath(oldname)
 	if err != nil {
 		return err
@@ -246,7 +263,7 @@ func (m *MemFSBatch) Link(oldname, newname string) error {
 	return nil
 }
 
-func (m *MemFSBatch) stat(name string, id FileID) (info FileInfo, err error) {
+func (m *MemFSReadBatch) stat(name string, id FileID) (info FileInfo, err error) {
 	var file *File
 	file, err = m.GetFileByID(id)
 	if err != nil {
@@ -257,7 +274,7 @@ func (m *MemFSBatch) stat(name string, id FileID) (info FileInfo, err error) {
 	return
 }
 
-func (m *MemFSBatch) ensureFile(
+func (m *MemFSWriteBatch) ensureFile(
 	path []string,
 	isDir bool,
 ) (
@@ -308,7 +325,7 @@ func (m *MemFSBatch) ensureFile(
 	return
 }
 
-func (m *MemFSBatch) MakeDir(p string) error {
+func (m *MemFSWriteBatch) MakeDir(p string) error {
 	parts, err := NameToPath(p)
 	if err != nil {
 		return we(err)
@@ -326,7 +343,7 @@ func (m *MemFSBatch) MakeDir(p string) error {
 	return nil
 }
 
-func (m *MemFSBatch) MakeDirAll(p string) error {
+func (m *MemFSWriteBatch) MakeDirAll(p string) error {
 	parts, err := NameToPath(p)
 	if err != nil {
 		return we(err)
@@ -342,7 +359,7 @@ func (m *MemFSBatch) MakeDirAll(p string) error {
 	return nil
 }
 
-func (m *MemFSBatch) Remove(name string, options ...RemoveOption) error {
+func (m *MemFSWriteBatch) Remove(name string, options ...RemoveOption) error {
 
 	path, err := NameToPath(name)
 	if err != nil {
@@ -392,7 +409,7 @@ func (m *MemFSBatch) Remove(name string, options ...RemoveOption) error {
 	return nil
 }
 
-func (m *MemFSBatch) changeFile(name string, followSymlink bool, fn func(*File) error) error {
+func (m *MemFSWriteBatch) changeFile(name string, followSymlink bool, fn func(*File) error) error {
 	file, err := m.GetFileByName(name, followSymlink)
 	if err != nil {
 		return err
@@ -409,7 +426,7 @@ func (m *MemFSBatch) changeFile(name string, followSymlink bool, fn func(*File) 
 	return m.updateFile(newFile)
 }
 
-func (m *MemFSBatch) changeFileByID(id FileID, followSymlink bool, fn func(*File) error) error {
+func (m *MemFSWriteBatch) changeFileByID(id FileID, followSymlink bool, fn func(*File) error) error {
 	file, err := m.GetFileByID(id)
 	if err != nil {
 		return err
@@ -426,7 +443,7 @@ func (m *MemFSBatch) changeFileByID(id FileID, followSymlink bool, fn func(*File
 	return m.updateFile(newFile)
 }
 
-func (m *MemFSBatch) ChangeMode(name string, mode fs.FileMode, options ...ChangeOption) error {
+func (m *MemFSWriteBatch) ChangeMode(name string, mode fs.FileMode, options ...ChangeOption) error {
 	var spec changeSpec
 	for _, fn := range options {
 		fn(&spec)
@@ -434,7 +451,7 @@ func (m *MemFSBatch) ChangeMode(name string, mode fs.FileMode, options ...Change
 	return m.changeFile(name, !spec.NoFollow, fileChangeMode(mode))
 }
 
-func (m *MemFSBatch) updateFile(file *File) error {
+func (m *MemFSWriteBatch) updateFile(file *File) error {
 	newMapNode, err := m.files.Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
 		return file, nil
 	})
@@ -447,7 +464,7 @@ func (m *MemFSBatch) updateFile(file *File) error {
 	return nil
 }
 
-func (m *MemFSBatch) ChangeOwner(name string, uid, gid int, options ...ChangeOption) error {
+func (m *MemFSWriteBatch) ChangeOwner(name string, uid, gid int, options ...ChangeOption) error {
 	var spec changeSpec
 	for _, fn := range options {
 		fn(&spec)
@@ -455,11 +472,11 @@ func (m *MemFSBatch) ChangeOwner(name string, uid, gid int, options ...ChangeOpt
 	return m.changeFile(name, !spec.NoFollow, fileChagneOwner(uid, gid))
 }
 
-func (m *MemFSBatch) Truncate(name string, size int64) error {
+func (m *MemFSWriteBatch) Truncate(name string, size int64) error {
 	return m.changeFile(name, true, fileTruncate(size))
 }
 
-func (m *MemFSBatch) ChangeTimes(name string, atime, mtime time.Time, options ...ChangeOption) error {
+func (m *MemFSWriteBatch) ChangeTimes(name string, atime, mtime time.Time, options ...ChangeOption) error {
 	var spec changeSpec
 	for _, fn := range options {
 		fn(&spec)
@@ -467,7 +484,7 @@ func (m *MemFSBatch) ChangeTimes(name string, atime, mtime time.Time, options ..
 	return m.changeFile(name, !spec.NoFollow, fileChangeTimes(atime, mtime))
 }
 
-func (m *MemFSBatch) Create(name string) (Handle, error) {
+func (m *MemFSWriteBatch) Create(name string) (Handle, error) {
 	path, err := NameToPath(name)
 	if err != nil {
 		return nil, err
@@ -488,7 +505,7 @@ func (m *MemFSBatch) Create(name string) (Handle, error) {
 	return m.NewHandle(name, id), nil
 }
 
-func (m *MemFSBatch) NewHandle(name string, id FileID) *MemHandle {
+func (m *MemFSReadBatch) NewHandle(name string, id FileID) *MemHandle {
 	return &MemHandle{
 		name: name,
 		fs:   m.fs,
@@ -496,7 +513,7 @@ func (m *MemFSBatch) NewHandle(name string, id FileID) *MemHandle {
 	}
 }
 
-func (m *MemFSBatch) SymLink(oldname, newname string) error {
+func (m *MemFSWriteBatch) SymLink(oldname, newname string) error {
 	path, err := NameToPath(newname)
 	if err != nil {
 		return err
@@ -540,7 +557,7 @@ func (m *MemFSBatch) SymLink(oldname, newname string) error {
 	return nil
 }
 
-func (m *MemFSBatch) ReadLink(name string) (link string, err error) {
+func (m *MemFSReadBatch) ReadLink(name string) (link string, err error) {
 	file, err := m.GetFileByName(name, false)
 	if err != nil {
 		return "", err
@@ -548,7 +565,7 @@ func (m *MemFSBatch) ReadLink(name string) (link string, err error) {
 	return file.Symlink, nil
 }
 
-func (m *MemFSBatch) Rename(oldname string, newname string) error {
+func (m *MemFSWriteBatch) Rename(oldname string, newname string) error {
 	oldpath, err := NameToPath(oldname)
 	if err != nil {
 		return err
