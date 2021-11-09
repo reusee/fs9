@@ -2,6 +2,7 @@ package fs9
 
 import (
 	"io/fs"
+	iofs "io/fs"
 	"testing"
 
 	"github.com/reusee/e4"
@@ -111,5 +112,30 @@ func TestMemFS2(t *testing.T) {
 	eq(
 		is(err, ErrFileNotFound), true,
 	)
+
+}
+
+func TestMemFSBatchMerge(t *testing.T) {
+	defer he(nil, e4.TestingFatal(t))
+	fs := NewMemFS()
+
+	batch1, apply1 := fs.NewBatch()
+	batch2, apply2 := fs.NewBatch()
+	_, err := batch1.Create("foo")
+	ce(err)
+	_, err = batch2.Create("bar")
+	ce(err)
+	_, err = iofs.Stat(fs, "foo")
+	eq(is(err, ErrFileNotFound), true)
+	err = nil
+	apply1(&err)
+	_, err = iofs.Stat(fs, "foo")
+	ce(err)
+	_, err = iofs.Stat(fs, "bar")
+	eq(is(err, ErrFileNotFound), true)
+	err = nil
+	apply2(&err)
+	_, err = iofs.Stat(fs, "bar")
+	ce(err)
 
 }

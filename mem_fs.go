@@ -2,11 +2,11 @@ package fs9
 
 import (
 	"io/fs"
-	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/reusee/dscope"
+	"github.com/reusee/it"
 )
 
 type MemFS struct {
@@ -41,7 +41,7 @@ func NewMemFS() *MemFS {
 	m.files = newNode.(*FileMap)
 	m.root = &DirEntry{}
 	m.root = &DirEntry{
-		nodeID: rand.Int63(),
+		nodeID: it.NewNodeID(),
 		id:     rootFile.ID,
 		name:   ".",
 		isDir:  rootFile.IsDir,

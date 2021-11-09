@@ -3,7 +3,6 @@ package fs9
 import (
 	"fmt"
 	"io"
-	"math/rand"
 	"strings"
 
 	"github.com/reusee/it"
@@ -21,7 +20,7 @@ var _ Node = new(FileMap)
 
 func NewFileMap(level int, shardKey uint8) *FileMap {
 	return &FileMap{
-		nodeID:   rand.Int63(),
+		nodeID:   it.NewNodeID(),
 		subs:     it.NewNodeSet(nil),
 		level:    level,
 		shardKey: shardKey,
@@ -34,7 +33,7 @@ func (f *FileMap) NodeID() int64 {
 
 func (f *FileMap) Clone() *FileMap {
 	newMap := *f
-	newMap.nodeID = rand.Int63()
+	newMap.nodeID = it.NewNodeID()
 	return &newMap
 }
 
@@ -128,8 +127,7 @@ func (f *FileMap) Merge(ctx Scope, node2 Node) (Node, error) {
 		panic(fmt.Errorf("cannot merge"))
 	}
 	// new
-	newMap := map2
-	newMap.nodeID = rand.Int63()
+	newMap := NewFileMap(map2.level, map2.shardKey)
 	newSubsNode, err := f.subs.Merge(ctx, map2.subs)
 	if err != nil {
 		return nil, err

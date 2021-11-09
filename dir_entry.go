@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"math/rand"
 	"strings"
+
+	"github.com/reusee/it"
 )
 
+//TODO CRDT
 type DirEntry struct {
 	nodeID int64
 	id     FileID
@@ -86,6 +88,6 @@ func (d DirEntry) Merge(ctx Scope, node2 Node) (Node, error) {
 	}
 	// new
 	newNode := entry2
-	newNode.nodeID = rand.Int63()
+	newNode.nodeID = it.NewNodeID()
 	return newNode, nil
 }

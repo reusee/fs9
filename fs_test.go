@@ -418,27 +418,60 @@ func testFS(
 	})
 
 	t.Run("parallel operations", func(t *testing.T) {
+		t.Skip() //TODO
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()
+
 		wg := new(sync.WaitGroup)
-		for i := 0; i < 1024; i++ {
+		n := 1024
+		for i := 0; i < n; i++ {
 			wg.Add(1)
 			i := i
 			go func() {
 				defer wg.Done()
+
 				name := fmt.Sprintf("%d", i)
 				h, err := fs.Create(name)
 				ce(err)
 				defer h.Close()
+
 				data := []byte(fmt.Sprintf("%d", i))
 				_, err = h.Write(data)
 				ce(err)
-				content, err := iofs.ReadFile(fs, name)
+
+				h2, err := fs.OpenHandle(name)
 				ce(err)
-				eq(content, data)
+				ce(h2.ChangeOwner(42, 24))
+
+				stat, err := iofs.Stat(fs, name)
+				ce(err)
+				ext := stat.Sys().(ExtFileInfo)
+				pt("-> %+v\n", stat)
+				eq(
+					stat.Name(), name,
+					ext.UserID, 42,
+					ext.GroupID, 24,
+				//TODO
+				//stat.Size(), int64(len(data)),
+				)
+
+				//TODO
+				//content, err := iofs.ReadFile(fs, name)
+				//ce(err)
+				//eq(content, data)
 			}()
 		}
 		wg.Wait()
+
+		paths := make(map[string]bool)
+		ce(iofs.WalkDir(fs, ".", func(path string, entry iofs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			paths[path] = true
+			return nil
+		}))
+		eq(len(paths), n+1)
 	})
 
 	t.Run("delete non-empty dir", func(t *testing.T) {

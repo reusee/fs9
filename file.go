@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"math/rand"
 	"strings"
 	"time"
 
 	"github.com/reusee/it"
 )
 
+//TODO CRDT
 type File struct {
 	nodeID     int64
 	ID         FileID
@@ -44,8 +44,8 @@ func NewFile(isDir bool) *File {
 		mode = fs.ModeDir
 	}
 	f := &File{
-		nodeID:  rand.Int63(),
-		ID:      FileID(rand.Int63()),
+		nodeID:  it.NewNodeID(),
+		ID:      FileID(it.NewNodeID()),
 		IsDir:   isDir,
 		Mode:    mode,
 		ModTime: time.Now(),
@@ -63,7 +63,7 @@ func (f *File) Clone() *File {
 		now = now.Add(time.Nanosecond)
 	}
 	newFile.ModTime = now
-	newFile.nodeID = rand.Int63()
+	newFile.nodeID = it.NewNodeID()
 	return &newFile
 }
 
@@ -167,9 +167,10 @@ func (f *File) Merge(ctx Scope, node2 Node) (Node, error) {
 	if file2.ID != f.ID {
 		panic(fmt.Errorf("cannot mrege different id"))
 	}
+
 	// new
-	newFile := file2
-	newFile.nodeID = rand.Int63()
+	newFile := *file2
+	newFile.nodeID = it.NewNodeID()
 	newSubsNode, err := f.Subs.Merge(ctx, file2.Subs)
 	if err != nil {
 		return nil, err
@@ -177,6 +178,6 @@ func (f *File) Merge(ctx Scope, node2 Node) (Node, error) {
 	if newSubsNode != nil {
 		newFile.Subs = newSubsNode.(*NodeSet)
 	}
-	//TODO merge content
-	return newFile, nil
+
+	return &newFile, nil
 }

@@ -2,8 +2,9 @@ package fs9
 
 import (
 	"io/fs"
-	"math/rand"
 	"time"
+
+	"github.com/reusee/it"
 )
 
 type MemFSBatch struct {
@@ -230,7 +231,7 @@ func (m *MemFSBatch) Link(oldname, newname string) error {
 				return node, ErrFileExisted
 			}
 			return DirEntry{
-				nodeID: rand.Int63(),
+				nodeID: it.NewNodeID(),
 				id:     entry.id,
 				name:   path[len(path)-1],
 				isDir:  entry.isDir,
@@ -292,7 +293,7 @@ func (m *MemFSBatch) ensureFile(
 
 			name := path[len(path)-1]
 			return DirEntry{
-				nodeID: rand.Int63(),
+				nodeID: it.NewNodeID(),
 				id:     file.ID,
 				name:   name,
 				isDir:  file.IsDir,
@@ -525,7 +526,7 @@ func (m *MemFSBatch) SymLink(oldname, newname string) error {
 
 			name := path[len(path)-1]
 			return DirEntry{
-				nodeID: rand.Int63(),
+				nodeID: it.NewNodeID(),
 				id:     file.ID,
 				name:   name,
 				isDir:  file.IsDir,
