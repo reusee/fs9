@@ -39,7 +39,6 @@ func NewMemFS() *MemFS {
 		panic(err)
 	}
 	m.files = newNode.(*FileMap)
-	m.root = &DirEntry{}
 	m.root = &DirEntry{
 		nodeID: it.NewNodeID(),
 		id:     rootFile.ID,

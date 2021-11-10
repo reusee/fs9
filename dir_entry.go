@@ -22,8 +22,14 @@ var _ fs.DirEntry = DirEntry{}
 
 var _ Node = DirEntry{}
 
-func (d DirEntry) NodeID() int64 {
-	return d.nodeID
+func (d DirEntry) Equal(n2 Node) bool {
+	switch n2 := n2.(type) {
+	case DirEntry:
+		return d.nodeID == n2.nodeID
+	case *DirEntry:
+		return d.nodeID == n2.nodeID
+	}
+	panic("type mismatch")
 }
 
 func (d DirEntry) Name() string {
@@ -65,12 +71,6 @@ func (d DirEntry) Mutate(ctx Scope, path KeyPath, fn func(Node) (Node, error)) (
 
 func (d DirEntry) Dump(w io.Writer, level int) {
 	fmt.Fprintf(w, "%sentry: %s %d\n", strings.Repeat(" ", level), d.name, d.id)
-}
-
-func (d DirEntry) Walk(cont Src) Src {
-	return func() (any, Src, error) {
-		return d, cont, nil
-	}
 }
 
 func (d DirEntry) Merge(ctx Scope, node2 Node) (Node, error) {

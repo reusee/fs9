@@ -36,7 +36,7 @@ func (m *MemFS) NewReadBatch() (
 
 	done = func(p *error) {
 		defer m.RUnlock()
-		if batch.files.NodeID() != m.files.NodeID() {
+		if !batch.files.Equal(m.files) {
 			panic("should not mutate")
 		}
 	}
@@ -67,7 +67,7 @@ func (m *MemFS) NewWriteBatch() (
 		if *p != nil {
 			return
 		}
-		if batch.files.NodeID() != m.files.NodeID() {
+		if !batch.files.Equal(m.files) {
 			m.files = batch.files
 		}
 	}
@@ -128,14 +128,14 @@ func (m *MemFSWriteBatch) mutateDirEntry(
 		return we(err)
 	}
 
-	if newParentNode.NodeID() != parentFile.NodeID() {
+	if !newParentNode.Equal(parentFile) {
 		newMapNode, err := m.files.Mutate(m.ctx, m.files.GetPath(parentID), func(node Node) (Node, error) {
 			return newParentNode, nil
 		})
 		if err != nil {
 			return err
 		}
-		if newMapNode.NodeID() != m.files.NodeID() {
+		if !newMapNode.Equal(m.files) {
 			m.files = newMapNode.(*FileMap)
 		}
 	}
@@ -304,7 +304,7 @@ func (m *MemFSWriteBatch) ensureFile(
 			if err != nil {
 				return nil, we(err)
 			}
-			if newNode.NodeID() != m.files.NodeID() {
+			if !newNode.Equal(m.files) {
 				m.files = newNode.(*FileMap)
 			}
 
@@ -458,7 +458,7 @@ func (m *MemFSWriteBatch) updateFile(file *File) error {
 	if err != nil {
 		return err
 	}
-	if newMapNode.NodeID() != m.files.NodeID() {
+	if !newMapNode.Equal(m.files) {
 		m.files = newMapNode.(*FileMap)
 	}
 	return nil
@@ -537,7 +537,7 @@ func (m *MemFSWriteBatch) SymLink(oldname, newname string) error {
 			if err != nil {
 				return nil, err
 			}
-			if newNode.NodeID() != m.files.NodeID() {
+			if !newNode.Equal(m.files) {
 				m.files = newNode.(*FileMap)
 			}
 

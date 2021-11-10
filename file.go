@@ -68,8 +68,12 @@ func (f *File) Clone() *File {
 
 var _ Node = new(File)
 
-func (f File) NodeID() int64 {
-	return f.nodeID
+func (f File) Equal(n2 Node) bool {
+	switch n2 := n2.(type) {
+	case *File:
+		return n2.nodeID == f.nodeID
+	}
+	panic("type mismatch")
 }
 
 func (f File) KeyRange() (Key, Key) {
@@ -91,7 +95,7 @@ func (f *File) Mutate(
 	if err != nil {
 		return nil, err
 	}
-	if newNode.NodeID() != f.Subs.NodeID() {
+	if !newNode.Equal(f.Subs) {
 		newFile := f.Clone()
 		newFile.Subs = newNode.(*NodeSet)
 		return newFile, nil
@@ -103,12 +107,6 @@ func (f File) Dump(w io.Writer, level int) {
 	fmt.Fprintf(w, "%sfile: %+v\n", strings.Repeat(" ", level), f)
 	if f.Subs != nil {
 		f.Subs.Dump(w, level+1)
-	}
-}
-
-func (f *File) Walk(cont Src) Src {
-	return func() (any, Src, error) {
-		return f, f.Subs.Walk(cont), nil
 	}
 }
 
@@ -159,7 +157,7 @@ func (f *File) Merge(ctx Scope, node2 Node) (Node, error) {
 	if !ok {
 		panic(fmt.Errorf("bad merge type: %T", node2))
 	}
-	if node2.NodeID() == f.NodeID() {
+	if node2.Equal(f) {
 		// not changed
 		return f, nil
 	}

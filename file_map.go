@@ -27,8 +27,12 @@ func NewFileMap(level int, shardKey uint8) *FileMap {
 	}
 }
 
-func (f *FileMap) NodeID() int64 {
-	return f.nodeID
+func (f *FileMap) Equal(n2 Node) bool {
+	switch n2 := n2.(type) {
+	case *FileMap:
+		return n2.nodeID == f.nodeID
+	}
+	panic("type mismatch")
 }
 
 func (f *FileMap) Clone() *FileMap {
@@ -70,7 +74,7 @@ func (f *FileMap) Mutate(
 		if err != nil { // NOCOVER
 			return nil, we(err)
 		}
-		if newNode.NodeID() != f.subs.NodeID() {
+		if !newNode.Equal(f.subs) {
 			newMap := f.Clone()
 			newMap.subs = newNode.(*NodeSet)
 			return newMap, nil
@@ -96,7 +100,7 @@ func (f *FileMap) Mutate(
 	if err != nil { // NOCOVER
 		return nil, we(err)
 	}
-	if newNode.NodeID() != f.subs.NodeID() {
+	if !newNode.Equal(f.subs) {
 		newMap := f.Clone()
 		newMap.subs = newNode.(*NodeSet)
 		return newMap, nil
@@ -110,16 +114,12 @@ func (f FileMap) Dump(w io.Writer, level int) {
 	f.subs.Dump(w, level+1)
 }
 
-func (f FileMap) Walk(cont Src) Src {
-	return f.subs.Walk(cont)
-}
-
 func (f *FileMap) Merge(ctx Scope, node2 Node) (Node, error) {
 	map2, ok := node2.(*FileMap)
 	if !ok {
 		panic(fmt.Errorf("bad merge type %T", node2))
 	}
-	if map2.NodeID() == f.NodeID() {
+	if map2.Equal(f) {
 		// not chnaged
 		return f, nil
 	}
