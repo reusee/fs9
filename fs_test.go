@@ -81,6 +81,7 @@ func testFS(
 			ce(err)
 			_, err = fmt.Fprintf(h, "foo")
 			ce(err)
+			ce(h.Sync())
 			ce(h.Close())
 
 			// info
@@ -189,6 +190,10 @@ func testFS(
 				stat.ModTime(), t1,
 				ext.AccessTime, t2,
 			)
+
+			// bad seek
+			_, err = h.Seek(42, 42)
+			eq(is(err, ErrBadArgument), true)
 
 		}
 
@@ -550,6 +555,34 @@ func testFS(
 		eq(
 			modTime2.After(modTime1), true,
 		)
+	})
+
+	t.Run("handle close", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		fs := newFS()
+		h, err := fs.Create("foo")
+		ce(err)
+		h.Close()
+		_, err = h.Seek(0, 0)
+		eq(is(err, ErrClosed), true)
+		_, err = h.Stat()
+		eq(is(err, ErrClosed), true)
+		err = h.Sync()
+		eq(is(err, ErrClosed), true)
+		err = h.ChangeMode(0755)
+		eq(is(err, ErrClosed), true)
+		err = h.ChangeOwner(42, 42)
+		eq(is(err, ErrClosed), true)
+		err = h.ChangeTimes(time.Now(), time.Now())
+		eq(is(err, ErrClosed), true)
+		_, err = h.ReadDir(-1)
+		eq(is(err, ErrClosed), true)
+		_, err = h.ReadAt(nil, 0)
+		eq(is(err, ErrClosed), true)
+		_, err = h.Write([]byte("foo"))
+		eq(is(err, ErrClosed), true)
+		err = h.Truncate(0)
+		eq(is(err, ErrClosed), true)
 	})
 
 }

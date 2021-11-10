@@ -35,7 +35,7 @@ func NewMemFS() *MemFS {
 	newNode, err := m.files.Mutate(m.ctx, m.files.GetPath(rootFile.ID), func(node Node) (Node, error) {
 		return rootFile, nil
 	})
-	if err != nil {
+	if err != nil { // NOCOVER
 		panic(err)
 	}
 	m.files = newNode.(*FileMap)

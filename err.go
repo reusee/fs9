@@ -15,4 +15,5 @@ var (
 	ErrOutOfBounds  = errors.New("out of bounds")
 	ErrTypeMismatch = errors.New("type mismatch")
 	ErrCannotLink   = errors.New("cannot link")
+	ErrBadArgument  = errors.New("bad argument")
 )

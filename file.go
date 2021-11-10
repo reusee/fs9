@@ -19,7 +19,7 @@ type File struct {
 	ModTime    time.Time
 	Subs       *NodeSet // name -> NamedFileID
 	Symlink    string
-	Content    []byte
+	Content    []byte //TODO sharded bytes slice
 	UserID     int
 	GroupID    int
 	AccessTime time.Time

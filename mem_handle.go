@@ -1,12 +1,13 @@
 package fs9
 
 import (
-	"fmt"
 	"io"
 	"io/fs"
 	"path"
 	"sync"
 	"time"
+
+	"github.com/reusee/e4"
 )
 
 type MemHandle struct {
@@ -29,10 +30,10 @@ func (m *MemHandle) Name() string {
 
 func (m *MemHandle) Stat() (fs.FileInfo, error) {
 	m.Lock()
+	defer m.Unlock()
 	if m.closed {
 		return nil, ErrClosed
 	}
-	m.Unlock()
 	return m.fs.stat(path.Base(m.name), m.id)
 }
 
@@ -45,7 +46,7 @@ func (m *MemHandle) Read(buf []byte) (n int, err error) {
 	batch, done := m.fs.NewReadBatch()
 	defer done(&err)
 	file, err := batch.GetFileByID(m.id)
-	if err != nil {
+	if err != nil { // NOCOVER
 		return 0, err
 	}
 	n, err = file.ReadAt(buf, m.offset)
@@ -55,14 +56,14 @@ func (m *MemHandle) Read(buf []byte) (n int, err error) {
 
 func (m *MemHandle) ReadAt(buf []byte, offset int64) (n int, err error) {
 	m.Lock()
+	defer m.Unlock()
 	if m.closed {
 		return 0, ErrClosed
 	}
-	m.Unlock()
 	batch, done := m.fs.NewReadBatch()
 	defer done(&err)
 	file, err := batch.GetFileByID(m.id)
-	if err != nil {
+	if err != nil { // NOCOVER
 		return 0, err
 	}
 	return file.ReadAt(buf, offset)
@@ -90,12 +91,14 @@ func (m *MemHandle) Seek(offset int64, whence int) (n int64, err error) {
 		batch, done := m.fs.NewReadBatch()
 		defer done(&err)
 		file, err := batch.GetFileByID(m.id)
-		if err != nil {
+		if err != nil { // NOCOVER
 			return 0, err
 		}
 		m.offset = file.Size + offset
 	default:
-		return m.offset, fmt.Errorf("bad whence")
+		return m.offset, we.With(
+			e4.Info("bad whence"),
+		)(ErrBadArgument)
 	}
 	return m.offset, nil
 }
@@ -109,16 +112,16 @@ func (m *MemHandle) Write(data []byte) (n int, err error) {
 	batch, done := m.fs.NewWriteBatch()
 	defer done(&err)
 	file, err := batch.GetFileByID(m.id)
-	if err != nil {
+	if err != nil { // NOCOVER
 		return 0, err
 	}
 	var newFile *File
 	newFile, n, err = file.WriteAt(data, m.offset)
-	if err != nil {
+	if err != nil { // NOCOVER
 		return 0, err
 	}
 	m.offset += int64(n)
-	if err := batch.updateFile(newFile); err != nil {
+	if err := batch.updateFile(newFile); err != nil { // NOCOVER
 		return 0, err
 	}
 	return
@@ -134,7 +137,7 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 		batch, done := m.fs.NewReadBatch()
 		defer done(&err)
 		file, err := batch.GetFileByID(m.id)
-		if err != nil {
+		if err != nil { // NOCOVER
 			return nil, err
 		}
 		m.iter = file.Subs.Range(nil)
@@ -146,7 +149,7 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 		}
 		var v any
 		v, err = m.iter.Next()
-		if err != nil {
+		if err != nil { // NOCOVER
 			return nil, err
 		}
 		if v == nil {
@@ -162,29 +165,54 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 }
 
 func (h *MemHandle) ChangeMode(mode fs.FileMode) (err error) {
+	h.Lock()
+	defer h.Unlock()
+	if h.closed {
+		return ErrClosed
+	}
 	batch, done := h.fs.NewWriteBatch()
 	defer done(&err)
 	return batch.changeFileByID(h.id, true, fileChangeMode(mode))
 }
 
 func (h *MemHandle) ChangeOwner(uid, gid int) (err error) {
+	h.Lock()
+	defer h.Unlock()
+	if h.closed {
+		return ErrClosed
+	}
 	batch, done := h.fs.NewWriteBatch()
 	defer done(&err)
 	return batch.changeFileByID(h.id, true, fileChagneOwner(uid, gid))
 }
 
 func (h *MemHandle) Sync() error {
+	h.Lock()
+	defer h.Unlock()
+	if h.closed {
+		return ErrClosed
+	}
 	//TODO materialize
 	return nil
 }
 
 func (h *MemHandle) Truncate(size int64) (err error) {
+	h.Lock()
+	defer h.Unlock()
+	if h.closed {
+		return ErrClosed
+	}
 	batch, done := h.fs.NewWriteBatch()
 	defer done(&err)
 	return batch.changeFileByID(h.id, true, fileTruncate(size))
 }
 
 func (h *MemHandle) ChangeTimes(atime, mtime time.Time) (err error) {
+	h.Lock()
+	defer h.Unlock()
+	if h.closed {
+		return ErrClosed
+	}
 	batch, done := h.fs.NewWriteBatch()
 	defer done(&err)
 	return batch.changeFileByID(h.id, true, fileChangeTimes(atime, mtime))
