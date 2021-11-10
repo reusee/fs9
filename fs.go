@@ -22,7 +22,7 @@ type FS interface {
 	SymLink(oldname, newname string) error
 	Truncate(name string, size int64) error
 
-	//TODO snapshot
+	Snapshot() FS
 }
 
 type OpenOption func(*openSpec)

@@ -51,6 +51,16 @@ func NewMemFS() *MemFS {
 	return m
 }
 
+func (m *MemFS) Snapshot() FS {
+	m.RLock()
+	defer m.RUnlock()
+	return &MemFS{
+		ctx:   m.ctx,
+		root:  m.root,
+		files: m.files,
+	}
+}
+
 func (m *MemFS) Open(path string) (fs.File, error) {
 	return m.OpenHandle(path)
 }

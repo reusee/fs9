@@ -518,9 +518,23 @@ func testFS(
 
 	})
 
-	t.Run("snapshot persistence", func(t *testing.T) {
+	t.Run("snapshot", func(t *testing.T) {
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
-		//TODO
+		fs := newFS()
+		var snapshots []FS
+		for i := 0; i < 1024; i++ {
+			h, err := fs.Create("foo")
+			ce(err)
+			_, err = h.Write([]byte(fmt.Sprintf("%d", i)))
+			ce(err)
+			ce(h.Close())
+			snapshots = append(snapshots, fs.Snapshot())
+		}
+		for i, fs := range snapshots {
+			content, err := iofs.ReadFile(fs, "foo")
+			ce(err)
+			eq(content, []byte(fmt.Sprintf("%d", i)))
+		}
 	})
 
 	t.Run("mod time", func(t *testing.T) {
