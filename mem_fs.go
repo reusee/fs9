@@ -56,84 +56,84 @@ func (m *MemFS) Open(path string) (fs.File, error) {
 }
 
 func (m *MemFS) OpenHandle(name string, options ...OpenOption) (handle Handle, err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.OpenHandle(name, options...)
 }
 
 func (m *MemFS) MakeDir(p string) (err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.MakeDir(p)
 }
 
 func (m *MemFS) MakeDirAll(p string) (err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.MakeDirAll(p)
 }
 
 func (m *MemFS) Remove(name string, options ...RemoveOption) (err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.Remove(name, options...)
 }
 
 func (m *MemFS) ChangeMode(name string, mode fs.FileMode, options ...ChangeOption) (err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.ChangeMode(name, mode, options...)
 }
 
 func (m *MemFS) ChangeOwner(name string, uid, gid int, options ...ChangeOption) (err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.ChangeOwner(name, uid, gid, options...)
 }
 
 func (m *MemFS) Truncate(name string, size int64) (err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.Truncate(name, size)
 }
 
 func (m *MemFS) ChangeTimes(name string, atime, mtime time.Time, options ...ChangeOption) (err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.ChangeTimes(name, atime, mtime, options...)
 }
 
 func (m *MemFS) Create(name string) (handle Handle, err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.Create(name)
 }
 
 func (m *MemFS) Link(oldname, newname string) (err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.Link(oldname, newname)
 }
 
 func (m *MemFS) SymLink(oldname, newname string) (err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.SymLink(oldname, newname)
 }
 
 func (m *MemFS) stat(name string, id FileID) (info FileInfo, err error) {
-	batch, apply := m.NewReadBatch()
-	defer apply(&err)
+	batch, done := m.NewReadBatch()
+	defer done(&err)
 	return batch.stat(name, id)
 }
 
 func (m *MemFS) ReadLink(name string) (link string, err error) {
-	batch, apply := m.NewReadBatch()
-	defer apply(&err)
+	batch, done := m.NewReadBatch()
+	defer done(&err)
 	return batch.ReadLink(name)
 }
 func (m *MemFS) Rename(oldname, newname string) (err error) {
-	batch, apply := m.NewWriteBatch()
-	defer apply(&err)
+	batch, done := m.NewWriteBatch()
+	defer done(&err)
 	return batch.Rename(oldname, newname)
 }

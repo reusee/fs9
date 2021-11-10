@@ -46,7 +46,7 @@ func (m *MemFS) NewReadBatch() (
 
 func (m *MemFS) NewWriteBatch() (
 	batch *MemFSWriteBatch,
-	apply func(*error),
+	done func(*error),
 ) {
 
 	m.Lock()
@@ -62,7 +62,7 @@ func (m *MemFS) NewWriteBatch() (
 		&getFileByID,
 	)
 
-	apply = func(p *error) {
+	done = func(p *error) {
 		defer m.Unlock()
 		if *p != nil {
 			return
