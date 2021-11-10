@@ -37,7 +37,7 @@ func (m *MemFS) NewReadBatch() (
 
 	done = func(p *error) {
 		defer m.RUnlock()
-		if !batch.files.Equal(m.files) {
+		if !batch.files.Equal(m.files) { // NOCOVER
 			panic("should not mutate")
 		}
 	}
@@ -93,7 +93,7 @@ func (m *MemFSWriteBatch) OpenHandle(name string, options ...OpenOption) (handle
 		if is(err, ErrFileNotFound) && spec.Create {
 			// try create
 			fileID, _, err := m.ensureFile(path, false)
-			if err != nil { // NOCOVER
+			if err != nil {
 				return nil, we(err)
 			}
 			id = fileID
@@ -116,7 +116,7 @@ func (m *MemFSWriteBatch) mutateDirEntry(
 		return we(err)
 	}
 	parentFile, err := m.GetFileByID(parentID)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return we(err)
 	}
 
@@ -160,7 +160,7 @@ func (m *MemFSReadBatch) GetDirEntryByPath(parent *DirEntry, path []string, foll
 		return parent, nil
 	}
 	file, err := m.GetFileByID(parent.id)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return nil, we(err)
 	}
 	name := path[0]
@@ -177,11 +177,11 @@ func (m *MemFSReadBatch) GetDirEntryByPath(parent *DirEntry, path []string, foll
 	}
 	if followSymlink && entry._type&fs.ModeSymlink > 0 {
 		file, err := m.GetFileByID(entry.id)
-		if err != nil { // NOCOVER
+		if err != nil {
 			return nil, err
 		}
 		path, err := NameToPath(file.Symlink)
-		if err != nil { // NOCOVER
+		if err != nil {
 			return nil, err
 		}
 		return m.GetDirEntryByPath(nil, path, followSymlink)
@@ -195,7 +195,7 @@ func (m *MemFSReadBatch) GetFileByID(id FileID) (*File, error) {
 		m.ctx,
 		m.files.GetPath(id),
 		func(node Node) (Node, error) {
-			if node == nil {
+			if node == nil { // NOCOVER
 				return nil, ErrFileNotFound
 			}
 			file = node.(*File)
@@ -205,6 +205,7 @@ func (m *MemFSReadBatch) GetFileByID(id FileID) (*File, error) {
 	if err != nil {
 		return nil, we(err)
 	}
+	//TODO check permission
 	return file, nil
 }
 
@@ -267,7 +268,7 @@ func (m *MemFSWriteBatch) Link(oldname, newname string) error {
 func (m *MemFSReadBatch) stat(name string, id FileID) (info FileInfo, err error) {
 	var file *File
 	file, err = m.GetFileByID(id)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return
 	}
 	info, err = file.Stat()
@@ -328,11 +329,11 @@ func (m *MemFSWriteBatch) ensureFile(
 
 func (m *MemFSWriteBatch) MakeDir(p string) error {
 	parts, err := NameToPath(p)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return we(err)
 	}
 	if len(parts) == 0 {
-		return nil
+		return ErrFileExisted
 	}
 	_, created, err := m.ensureFile(parts, true)
 	if err != nil {
@@ -414,7 +415,7 @@ func (m *MemFSWriteBatch) Remove(name string, options ...RemoveOption) error {
 
 func (m *MemFSWriteBatch) changeFile(name string, followSymlink bool, fn func(*File) error) error {
 	file, err := m.GetFileByName(name, followSymlink)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return err
 	}
 	if followSymlink {
@@ -423,7 +424,7 @@ func (m *MemFSWriteBatch) changeFile(name string, followSymlink bool, fn func(*F
 		}
 	}
 	newFile := file.Clone()
-	if err := fn(newFile); err != nil { // NOCOVER
+	if err := fn(newFile); err != nil {
 		return err
 	}
 	return m.updateFile(newFile)
@@ -431,7 +432,7 @@ func (m *MemFSWriteBatch) changeFile(name string, followSymlink bool, fn func(*F
 
 func (m *MemFSWriteBatch) changeFileByID(id FileID, followSymlink bool, fn func(*File) error) error {
 	file, err := m.GetFileByID(id)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return err
 	}
 	if followSymlink {
@@ -532,12 +533,12 @@ func (m *MemFSWriteBatch) SymLink(oldname, newname string) error {
 			file.Mode = file.Mode | fs.ModeSymlink
 			file.Symlink = oldname
 			newNode, err := m.files.Mutate(m.ctx, m.files.GetPath(file.ID), func(node Node) (Node, error) {
-				if node != nil {
+				if node != nil { // NOCOVER
 					panic("impossible")
 				}
 				return file, nil
 			})
-			if err != nil { // NOCOVER
+			if err != nil {
 				return nil, err
 			}
 			if !newNode.Equal(m.files) {
@@ -575,7 +576,7 @@ func (m *MemFSWriteBatch) Rename(oldname string, newname string) error {
 	}
 
 	entry, err := m.GetDirEntryByPath(nil, oldpath, true)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return err
 	}
 

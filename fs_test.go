@@ -324,6 +324,9 @@ func testFS(
 			ext.UserID, 42,
 			ext.GroupID, 42,
 		)
+		// change symlink
+		ce(fs.ChangeMode("bar", 0777, OptNoFollow(true)))
+		ce(fs.ChangeOwner("bar", 42, 42, OptNoFollow(true)))
 		// remove bar
 		ce(fs.Remove("bar"))
 		// read by foo
@@ -343,6 +346,10 @@ func testFS(
 		eq(is(err, ErrFileNotFound), true)
 		_, err = fs.Open("bar")
 		ce(err)
+		_, err = fs.Create("qux")
+		ce(err)
+		err = fs.Rename("qux", "bar")
+		eq(is(err, ErrFileExisted), true)
 	})
 
 	t.Run("handle", func(t *testing.T) {
@@ -625,6 +632,8 @@ func testFS(
 		eq(is(err, ErrFileExisted), true)
 		err = fs.SymLink("yes", "foo")
 		eq(is(err, ErrFileExisted), true)
+		err = fs.MakeDir("")
+		eq(is(err, ErrFileExisted), true)
 	})
 
 	t.Run("permission", func(t *testing.T) {
@@ -640,6 +649,19 @@ func testFS(
 			is(err, ErrNoPermission), true,
 			is(err, ErrCannotRemove), true,
 		)
+	})
+
+	t.Run("file not found", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		fs := newFS()
+		_, err := fs.OpenHandle("foo/bar")
+		eq(is(err, ErrFileNotFound), true)
+		err = fs.Link("foo", "bar")
+		eq(is(err, ErrFileNotFound), true)
+		_, err = fs.ReadLink("foo")
+		eq(is(err, ErrFileNotFound), true)
+		err = fs.Rename("foo", "bar")
+		eq(is(err, ErrFileNotFound), true)
 	})
 
 }
