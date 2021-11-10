@@ -29,7 +29,7 @@ func (d DirEntry) Equal(n2 Node) bool {
 	case *DirEntry:
 		return d.nodeID == n2.nodeID
 	}
-	panic("type mismatch")
+	panic("type mismatch") // NOCOVER
 }
 
 func (d DirEntry) Name() string {
@@ -57,16 +57,10 @@ func (d DirEntry) KeyRange() (Key, Key) {
 }
 
 func (d DirEntry) Mutate(ctx Scope, path KeyPath, fn func(Node) (Node, error)) (Node, error) {
-	if len(path) == 0 {
-		return fn(d)
+	if len(path) > 0 {
+		return nil, ErrInvalidPath
 	}
-	var get GetFileByID
-	ctx.Assign(&get)
-	file, err := get(path[0].(FileID))
-	if err != nil {
-		return nil, err
-	}
-	return file.Mutate(ctx, path, fn)
+	return fn(d)
 }
 
 func (d DirEntry) Dump(w io.Writer, level int) {

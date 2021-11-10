@@ -20,8 +20,6 @@ var _ fs.FS = new(MemFS)
 
 var _ FS = new(MemFS)
 
-type GetFileByID func(id FileID) (*File, error)
-
 func NewMemFS() *MemFS {
 	m := &MemFS{
 		files: NewFileMap(2, 0),

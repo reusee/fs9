@@ -30,10 +30,7 @@ func (m *MemFS) NewReadBatch() (
 		root:  m.root,
 		files: m.files,
 	}
-	getFileByID := GetFileByID(batch.GetFileByID)
-	batch.ctx = m.ctx.Fork(
-		&getFileByID,
-	)
+	batch.ctx = m.ctx
 
 	done = func(p *error) {
 		defer m.RUnlock()
@@ -58,10 +55,7 @@ func (m *MemFS) NewWriteBatch() (
 			files: m.files,
 		},
 	}
-	getFileByID := GetFileByID(batch.GetFileByID)
-	batch.ctx = m.ctx.Fork(
-		&getFileByID,
-	)
+	batch.ctx = m.ctx
 
 	done = func(p *error) {
 		defer m.Unlock()
