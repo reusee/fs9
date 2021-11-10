@@ -46,7 +46,7 @@ func (m *MemHandle) Read(buf []byte) (n int, err error) {
 	batch, done := m.fs.NewReadBatch()
 	defer done(&err)
 	file, err := batch.GetFileByID(m.id)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return 0, err
 	}
 	n, err = file.ReadAt(buf, m.offset)
@@ -63,7 +63,7 @@ func (m *MemHandle) ReadAt(buf []byte, offset int64) (n int, err error) {
 	batch, done := m.fs.NewReadBatch()
 	defer done(&err)
 	file, err := batch.GetFileByID(m.id)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return 0, err
 	}
 	return file.ReadAt(buf, offset)
@@ -91,7 +91,7 @@ func (m *MemHandle) Seek(offset int64, whence int) (n int64, err error) {
 		batch, done := m.fs.NewReadBatch()
 		defer done(&err)
 		file, err := batch.GetFileByID(m.id)
-		if err != nil { // NOCOVER
+		if err != nil {
 			return 0, err
 		}
 		m.offset = file.Size + offset
@@ -112,16 +112,16 @@ func (m *MemHandle) Write(data []byte) (n int, err error) {
 	batch, done := m.fs.NewWriteBatch()
 	defer done(&err)
 	file, err := batch.GetFileByID(m.id)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return 0, err
 	}
 	var newFile *File
 	newFile, n, err = file.WriteAt(data, m.offset)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return 0, err
 	}
 	m.offset += int64(n)
-	if err := batch.updateFile(newFile); err != nil { // NOCOVER
+	if err := batch.updateFile(newFile); err != nil {
 		return 0, err
 	}
 	return
@@ -137,7 +137,7 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 		batch, done := m.fs.NewReadBatch()
 		defer done(&err)
 		file, err := batch.GetFileByID(m.id)
-		if err != nil { // NOCOVER
+		if err != nil {
 			return nil, err
 		}
 		m.iter = file.Subs.Range(nil)
@@ -149,7 +149,7 @@ func (m *MemHandle) ReadDir(n int) (ret []fs.DirEntry, err error) {
 		}
 		var v any
 		v, err = m.iter.Next()
-		if err != nil { // NOCOVER
+		if err != nil {
 			return nil, err
 		}
 		if v == nil {

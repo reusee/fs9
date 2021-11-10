@@ -71,7 +71,7 @@ func (f *FileMap) Mutate(
 	if len(path) == 1 {
 		// subs is *File, do not auto create
 		newNode, err := f.subs.Mutate(ctx, path, fn)
-		if err != nil { // NOCOVER
+		if err != nil {
 			return nil, we(err)
 		}
 		if !newNode.Equal(f.subs) {
@@ -91,13 +91,13 @@ func (f *FileMap) Mutate(
 		}
 		return node, nil
 	})
-	if err != nil { // NOCOVER
+	if err != nil {
 		return nil, we(err)
 	}
 
 	subs := newNode.(*NodeSet)
 	newNode, err = subs.Mutate(ctx, path, fn)
-	if err != nil { // NOCOVER
+	if err != nil {
 		return nil, we(err)
 	}
 	if !newNode.Equal(f.subs) {
