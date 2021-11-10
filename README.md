@@ -5,7 +5,7 @@ WORK IN PROGRESS
 
 ### Features
 
-- [ ] Snapshot
+- [x] Snapshot
 - [ ] Content defined chunking
 - [ ] Compression
 - [ ] Encryption
@@ -18,7 +18,7 @@ Layer:
 
 Interface:
 
-- [ ] Webdav
-- [ ] Fuse
+- [ ] webdav
+- [ ] fuse
 - [ ] 9p
 
