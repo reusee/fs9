@@ -115,7 +115,7 @@ func testFS(
 
 			// chagne mode
 			ce(fs.ChangeMode(path, 0755))
-			stat, err := iofs.Stat(fs, path)
+			stat, err := fs.Stat(path)
 			ce(err)
 			eq(
 				stat.Mode()&iofs.ModePerm, iofs.FileMode(0755),

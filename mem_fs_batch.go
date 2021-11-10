@@ -2,6 +2,7 @@ package fs9
 
 import (
 	"io/fs"
+	pathpkg "path"
 	"time"
 
 	"github.com/reusee/e4"
@@ -268,6 +269,18 @@ func (m *MemFSReadBatch) stat(name string, id FileID) (info FileInfo, err error)
 	info, err = file.Stat()
 	info.name = name
 	return
+}
+
+func (m *MemFSReadBatch) Stat(name string) (fs.FileInfo, error) {
+	path, err := NameToPath(name)
+	if err != nil {
+		return nil, err
+	}
+	id, err := m.GetFileIDByPath(path, true)
+	if err != nil {
+		return nil, err
+	}
+	return m.stat(pathpkg.Base(name), id)
 }
 
 func (m *MemFSWriteBatch) ensureFile(

@@ -21,6 +21,9 @@ type FS interface {
 	Rename(oldpath, newpath string) error
 	SymLink(oldname, newname string) error
 	Truncate(name string, size int64) error
+	Stat(name string) (fs.FileInfo, error)
+	//TODO
+	//LinkStat(name string) (fs.FileInfo, error)
 
 	Snapshot() FS
 }
