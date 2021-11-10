@@ -412,11 +412,6 @@ func (m *MemFSWriteBatch) changeFile(name string, followSymlink bool, fn func(*F
 	if err != nil {
 		return err
 	}
-	if followSymlink {
-		if file.Mode&fs.ModeSymlink > 0 {
-			return m.changeFile(file.Symlink, true, fn)
-		}
-	}
 	newFile := file.Clone()
 	if err := fn(newFile); err != nil {
 		return err
@@ -428,11 +423,6 @@ func (m *MemFSWriteBatch) changeFileByID(id FileID, followSymlink bool, fn func(
 	file, err := m.GetFileByID(id)
 	if err != nil {
 		return err
-	}
-	if followSymlink {
-		if file.Mode&fs.ModeSymlink > 0 {
-			return m.changeFile(file.Symlink, true, fn)
-		}
 	}
 	newFile := file.Clone()
 	if err := fn(newFile); err != nil {
@@ -580,8 +570,8 @@ func (m *MemFSWriteBatch) Rename(oldname string, newname string) error {
 	}
 	if err := m.mutateDirEntry(path,
 		func(node Node) (Node, error) {
-			if node == nil {
-				return nil, ErrFileNotFound
+			if node == nil { // NOCOVER
+				panic("impossible")
 			}
 			return nil, nil
 		},

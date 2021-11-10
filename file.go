@@ -27,7 +27,9 @@ type File struct {
 
 type FileID uint64
 
-func (f FileID) Cmp(i any) int {
+var _ it.Comparable = FileID(0)
+
+func (f FileID) Cmp(i any) int { // NOCOVER
 	b := i.(FileID)
 	if f < b {
 		return -1
@@ -73,7 +75,7 @@ func (f File) Equal(n2 Node) bool {
 	case *File:
 		return n2.nodeID == f.nodeID
 	}
-	panic("type mismatch")
+	panic("type mismatch") // NOCOVER
 }
 
 func (f File) KeyRange() (Key, Key) {
@@ -103,7 +105,7 @@ func (f *File) Mutate(
 	return f, nil
 }
 
-func (f File) Dump(w io.Writer, level int) {
+func (f File) Dump(w io.Writer, level int) { // NOCOVER
 	fmt.Fprintf(w, "%sfile: %+v\n", strings.Repeat(" ", level), f)
 	if f.Subs != nil {
 		f.Subs.Dump(w, level+1)
@@ -152,7 +154,8 @@ func (f *File) WriteAt(data []byte, offset int64) (*File, int, error) {
 	return newFile, len(data), nil
 }
 
-func (f *File) Merge(ctx Scope, node2 Node) (Node, error) {
+//TODO 3-way merge
+func (f *File) Merge(ctx Scope, node2 Node) (Node, error) { // NOCOVER
 	file2, ok := node2.(*File)
 	if !ok {
 		panic(fmt.Errorf("bad merge type: %T", node2))

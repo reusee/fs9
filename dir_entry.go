@@ -57,17 +57,18 @@ func (d DirEntry) KeyRange() (Key, Key) {
 }
 
 func (d DirEntry) Mutate(ctx Scope, path KeyPath, fn func(Node) (Node, error)) (Node, error) {
-	if len(path) > 0 {
+	if len(path) > 0 { // NOCOVER
 		return nil, ErrInvalidPath
 	}
 	return fn(d)
 }
 
-func (d DirEntry) Dump(w io.Writer, level int) {
+func (d DirEntry) Dump(w io.Writer, level int) { // NOCOVER
 	fmt.Fprintf(w, "%sentry: %s %d\n", strings.Repeat(" ", level), d.name, d.id)
 }
 
-func (d DirEntry) Merge(ctx Scope, node2 Node) (Node, error) {
+//TODO 3-way merge
+func (d DirEntry) Merge(ctx Scope, node2 Node) (Node, error) { // NOCOVER
 	entry2, ok := node2.(DirEntry)
 	if !ok {
 		panic(fmt.Errorf("bad merge type %T", node2))

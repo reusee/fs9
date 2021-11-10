@@ -270,22 +270,33 @@ func testFS(
 	t.Run("link", func(t *testing.T) {
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()
+		// new file
 		f, err := fs.Create("foo")
 		ce(err)
+		// write file
 		_, err = f.Write([]byte("foo"))
 		ce(err)
 		ce(f.Close())
+		// link to bar
 		ce(fs.Link("foo", "bar"))
+		// open by bar
 		f, err = fs.OpenHandle("bar")
 		ce(err)
 		defer f.Close()
+		// read bar
 		content, err := io.ReadAll(f)
 		ce(err)
 		eq(content, []byte("foo"))
+		// remove foo
 		ce(fs.Remove("foo"))
+		// read bar
 		content, err = iofs.ReadFile(fs, "bar")
 		ce(err)
 		eq(content, []byte("foo"))
+		// new dir
+		ce(fs.MakeDir("foo"))
+		err = fs.Link("foo", "qux")
+		eq(is(err, ErrCannotLink), true)
 	})
 
 	t.Run("symlink", func(t *testing.T) {
@@ -327,6 +338,8 @@ func testFS(
 		// change symlink
 		ce(fs.ChangeMode("bar", 0777, OptNoFollow(true)))
 		ce(fs.ChangeOwner("bar", 42, 42, OptNoFollow(true)))
+		ce(fs.ChangeTimes("bar", time.Now(), time.Now(), OptNoFollow(true)))
+		//TODO link stat
 		// remove bar
 		ce(fs.Remove("bar"))
 		// read by foo
