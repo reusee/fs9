@@ -32,7 +32,7 @@ func (f *FileMap) Equal(n2 Node) bool {
 	case *FileMap:
 		return n2.nodeID == f.nodeID
 	}
-	panic("type mismatch")
+	panic("type mismatch") // NOCOVER
 }
 
 func (f *FileMap) Clone() *FileMap {
@@ -114,9 +114,10 @@ func (f FileMap) Dump(w io.Writer, level int) {
 	f.subs.Dump(w, level+1)
 }
 
-func (f *FileMap) Merge(ctx Scope, node2 Node) (Node, error) {
+//TODO 3-way merge
+func (f *FileMap) Merge(ctx Scope, node2 Node) (Node, error) { // NOCOVER
 	map2, ok := node2.(*FileMap)
-	if !ok {
+	if !ok { // NOCOVER
 		panic(fmt.Errorf("bad merge type %T", node2))
 	}
 	if map2.Equal(f) {

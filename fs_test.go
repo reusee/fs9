@@ -170,6 +170,12 @@ func testFS(
 			eq(
 				len(data), 99,
 			)
+			ce(h.Truncate(99))
+			stat, err = h.Stat()
+			ce(err)
+			eq(
+				stat.Size(), int64(99),
+			)
 
 			// change times
 			t1 := time.Now().Add(-time.Hour)
@@ -285,19 +291,42 @@ func testFS(
 	t.Run("symlink", func(t *testing.T) {
 		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
 		fs := newFS()
+		// create foo
 		f, err := fs.Create("foo")
 		ce(err)
+		// write foo
 		_, err = f.Write([]byte("foo"))
 		ce(err)
 		ce(f.Close())
+		// symlink bar to foo
 		ce(fs.SymLink("foo", "bar"))
+		// read bar link
 		link, err := fs.ReadLink("bar")
 		ce(err)
 		eq(link, "foo")
+		// read content by bar
 		content, err := iofs.ReadFile(fs, "bar")
 		ce(err)
 		eq(content, []byte("foo"))
+		// change owner by bar
+		h, err := fs.OpenHandle("bar")
+		ce(err)
+		defer h.Close()
+		ce(h.ChangeOwner(42, 42))
+		// change mode by bar
+		ce(fs.ChangeMode("bar", 0777))
+		// read stat by foo
+		stat, err := iofs.Stat(fs, "foo")
+		ce(err)
+		ext := stat.Sys().(ExtFileInfo)
+		eq(
+			stat.Mode(), iofs.FileMode(0777),
+			ext.UserID, 42,
+			ext.GroupID, 42,
+		)
+		// remove bar
 		ce(fs.Remove("bar"))
+		// read by foo
 		content, err = iofs.ReadFile(fs, "foo")
 		ce(err)
 		eq(content, []byte("foo"))
@@ -583,6 +612,34 @@ func testFS(
 		eq(is(err, ErrClosed), true)
 		err = h.Truncate(0)
 		eq(is(err, ErrClosed), true)
+	})
+
+	t.Run("file existed", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		fs := newFS()
+		_, err := fs.Create("foo")
+		ce(err)
+		_, err = fs.Create("yes")
+		ce(err)
+		err = fs.Link("yes", "foo")
+		eq(is(err, ErrFileExisted), true)
+		err = fs.SymLink("yes", "foo")
+		eq(is(err, ErrFileExisted), true)
+	})
+
+	t.Run("permission", func(t *testing.T) {
+		defer he(nil, e4.WrapStacktrace, e4.TestingFatal(t))
+		fs := newFS()
+		err := fs.Remove("")
+		eq(
+			is(err, ErrNoPermission), true,
+			is(err, ErrCannotRemove), true,
+		)
+		err = fs.Remove(".")
+		eq(
+			is(err, ErrNoPermission), true,
+			is(err, ErrCannotRemove), true,
+		)
 	})
 
 }
