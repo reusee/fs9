@@ -283,6 +283,18 @@ func (m *MemFSReadBatch) Stat(name string) (fs.FileInfo, error) {
 	return m.stat(pathpkg.Base(name), id)
 }
 
+func (m *MemFSReadBatch) LinkStat(name string) (fs.FileInfo, error) {
+	path, err := NameToPath(name)
+	if err != nil {
+		return nil, err
+	}
+	id, err := m.GetFileIDByPath(path, false)
+	if err != nil {
+		return nil, err
+	}
+	return m.stat(pathpkg.Base(name), id)
+}
+
 func (m *MemFSWriteBatch) ensureFile(
 	path []string,
 	isDir bool,

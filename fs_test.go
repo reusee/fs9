@@ -337,9 +337,20 @@ func testFS(
 		)
 		// change symlink
 		ce(fs.ChangeMode("bar", 0777, OptNoFollow(true)))
-		ce(fs.ChangeOwner("bar", 42, 42, OptNoFollow(true)))
-		ce(fs.ChangeTimes("bar", time.Now(), time.Now(), OptNoFollow(true)))
-		//TODO link stat
+		ce(fs.ChangeOwner("bar", 42, 99, OptNoFollow(true)))
+		now := time.Now()
+		ce(fs.ChangeTimes("bar", now, now, OptNoFollow(true)))
+		// link stat
+		stat, err = fs.LinkStat("bar")
+		ce(err)
+		ext = stat.Sys().(ExtFileInfo)
+		eq(
+			stat.Mode(), iofs.FileMode(0777),
+			ext.UserID, 42,
+			ext.GroupID, 99,
+			stat.ModTime(), now,
+			ext.AccessTime, now,
+		)
 		// remove bar
 		ce(fs.Remove("bar"))
 		// read by foo
