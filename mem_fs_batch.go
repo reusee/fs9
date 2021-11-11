@@ -5,7 +5,6 @@ import (
 	pathpkg "path"
 	"time"
 
-	"github.com/reusee/e4"
 	"github.com/reusee/it"
 )
 
@@ -388,7 +387,7 @@ func (m *MemFSWriteBatch) Remove(name string, options ...RemoveOption) error {
 	}
 	if len(path) == 0 {
 		return we.With(
-			e4.With(ErrCannotRemove),
+			ErrCannotRemove,
 		)(ErrNoPermission)
 	}
 

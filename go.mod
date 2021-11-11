@@ -3,8 +3,8 @@ module github.com/reusee/fs9
 go 1.18
 
 require (
-	github.com/reusee/dscope v0.0.0-20211015165530-41bdbb36de38
-	github.com/reusee/e4 v0.0.0-20211101154434-4a06b784ca7f
+	github.com/reusee/dscope v0.0.0-20211111113332-bbeb6693242f
+	github.com/reusee/e4 v0.0.0-20211111112921-a1e3637d4313
 	github.com/reusee/it v0.0.0-20211110031929-79bc5e8f9c61
 	github.com/reusee/pp v0.0.0-20211003125005-d93fee3792f3
 	github.com/reusee/sb v0.0.0-20211030075527-8700b3e709d5
